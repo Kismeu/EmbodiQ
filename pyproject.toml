@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "embodiq"
+version = "0.1.0"
+description = "Unified quantization adaptation + LIBERO evaluation harness for VLA / WAM models"
+requires-python = ">=3.10"
+# embodiq.core is numpy-only on purpose: it is vendored into three mutually
+# incompatible conda prefixes (torch 2.2/numpy 1.26 and torch 2.7/numpy 2.2).
+dependencies = ["numpy>=1.26"]
+
+[project.optional-dependencies]
+quant = ["torch>=2.2", "safetensors>=0.4"]
+ctl = ["pyyaml>=6", "pandas>=2"]
+nvml = ["nvidia-ml-py>=12"]
+
+[project.scripts]
+embodiq = "embodiq.ctl.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["embodiq*"]
+
+[tool.setuptools.package-data]
+"embodiq.core" = ["schema/*.json"]

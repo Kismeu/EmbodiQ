@@ -1,0 +1,10 @@
+__pycache__/
+*.egg-info/
+/results/
+/artifacts/
+/calib/
+/sens/
+/logs/
+*.pt
+*.safetensors
+*.npy
