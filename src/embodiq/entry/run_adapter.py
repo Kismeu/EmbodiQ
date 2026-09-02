@@ -51,6 +51,31 @@ def _git_sha(path: Path) -> str:
         return "unknown"
 
 
+def _detect_contention(device_index: int) -> dict:
+    """Is another process sharing this GPU?
+
+    Contention does not affect success rate, but it inflates latency by up to
+    2.2x (measured). Recording it per result file means the aggregator can keep
+    contended rows out of the latency table without discarding their SR.
+    """
+    try:
+        import pynvml
+
+        pynvml.nvmlInit()
+        h = pynvml.nvmlDeviceGetHandleByIndex(device_index)
+        procs = pynvml.nvmlDeviceGetComputeRunningProcesses(h)
+        import os
+
+        others = [p for p in procs if p.pid != os.getpid()]
+        return {
+            "contended": bool(others),
+            "n_other_procs": len(others),
+            "other_mem_gib": round(sum(p.usedGpuMemory or 0 for p in others) / 2**30, 2),
+        }
+    except Exception:
+        return {"contended": None, "n_other_procs": None}
+
+
 def _versions() -> dict:
     import numpy, torch, transformers
 
@@ -120,6 +145,13 @@ def main(argv: list[str] | None = None) -> int:
            "model_repo": _git_sha(EMB_ROOT / "VLA-Adapter")}
     versions = _versions()
 
+    contention = _detect_contention(0)
+    if contention.get("contended"):
+        print(f"[{args.suite}] WARNING: GPU shared with {contention['n_other_procs']} "
+              f"other process(es) using {contention['other_mem_gib']} GiB -- success rates are\n"
+              f"              unaffected but latency is inflated; rows tagged contended=true.",
+              flush=True)
+
     suite_ok = suite_n = 0
     for task_id in task_ids:
         result_file = args.out / args.suite / f"gpu{args.gpu}_task{task_id}_results.json"
@@ -137,7 +169,9 @@ def main(argv: list[str] | None = None) -> int:
             spec=policy.spec, protocol_name=proto.name,
             protocol_fields={k: v for k, v in dataclasses.asdict(proto).items() if k != "name"},
             gpu_id=args.gpu, quant=quant_meta, env_versions=versions, git=git,
+            contended=bool(contention.get("contended")),
         )
+        tr.env_versions = {**versions, "gpu_contention": contention}
         acc = LatencyAccumulator()
         # Warmup is per-process, not per-task: only pay it on the first task.
         if suite_n == 0:
