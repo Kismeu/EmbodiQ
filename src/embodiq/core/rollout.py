@@ -12,8 +12,8 @@ Three things this loop does that none of the three repo loops do:
    step body in a bare ``except Exception`` and let the episode fall through as
    ``success=False``. An OOM, a shape bug, or a broken quantized kernel then
    looks exactly like a policy failure, and "RTN loses 4 points" might be four
-   OOMs. Errors are typed, counted separately, and kept out of the success-rate
-   denominator.
+   OOMs. Model errors are typed and count as failures; environment errors are
+   invalid trials, and OOM/interrupts propagate to stop the worker.
 2. **Executed prefix != chunk length.** FastWAM predicts 32 actions and executes
    10. A loop that assumes they are equal works on two of three models.
 3. **Video is opt-in and frames are not even accumulated when off.** Both repos
@@ -105,15 +105,28 @@ def run_episode(
         return rec
 
     try:
+        if protocol.reseed_each_episode:
+            import random
+            random.seed(seed)
+            np.random.seed(seed)
+            import torch
+            torch.manual_seed(seed)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(seed)
+            env.seed(seed)
         env.reset()
         obs = env.set_init_state(initial_state)
+    except BaseException as exc:
+        _reraise_fatal(exc)
+        return fail(EpisodeStatus.ENV_ERROR, exc)
+    try:
         policy.reset(
             task_id=task_id, episode_idx=episode_idx,
             task_description=task_description, seed=seed,
         )
     except BaseException as exc:  # noqa: BLE001
         _reraise_fatal(exc)
-        return fail(EpisodeStatus.ENV_ERROR, exc)
+        return fail(EpisodeStatus.POLICY_ERROR, exc)
 
     # Settle period. Excluded from step counts, from latency denominators and
     # from video -- otherwise the wait steps inflate n_env_steps and deflate

@@ -1,8 +1,5 @@
-"""V7: an error must never be scored as a policy failure.
-
-Both Prismatic eval loops turn an exception into success=False. If we inherited
-that, "RTN loses 4 points" could be four OOMs and no quantization delta in this
-project would be interpretable. These tests pin the corrected behaviour.
+"""Model failures count in success rates, with visible diagnostic categories.
+Environment failures invalidate trials; OOM and interrupts propagate.
 """
 
 from __future__ import annotations
@@ -88,10 +85,10 @@ def test_success_and_timeout_are_scored():
     assert r.env_steps == PROTO.steps_for("libero_spatial")
 
 
-def test_policy_error_is_typed_and_not_scored():
+def test_policy_error_is_typed_and_scored_as_failure():
     r = run_episode(FakeEnv(succeed_at=100), FakePolicy(raise_on=5), **KW)
     assert r.status is EpisodeStatus.POLICY_ERROR
-    assert not r.counts_toward_success_rate, "an error must not count as a failure"
+    assert r.counts_toward_success_rate, "model errors must not inflate success by reducing the denominator"
     assert r.error["type"] == "RuntimeError"
     assert r.error["traceback"], "traceback must be captured, not discarded"
     assert r.env_steps == 4, "partial progress is preserved"
@@ -140,7 +137,7 @@ def test_wait_steps_excluded_from_counts():
     assert acc.n_env_steps == r.env_steps
 
 
-def test_error_excluded_from_success_rate_denominator():
+def test_model_error_kept_in_success_rate_denominator():
     from embodiq.core.result import TaskResult
     import dataclasses
 
@@ -157,7 +154,7 @@ def test_error_excluded_from_success_rate_denominator():
     d = tr.to_dict()
     assert d["metrics"]["n_success"] == 8
     assert d["metrics"]["n_error"] == 1
-    # 8/9, not 8/10: the error is removed from the denominator entirely.
-    assert d["metrics"]["success_rate"] == pytest.approx(8 / 9)
+    # Model failures remain visible and count against the planned trials.
+    assert d["metrics"]["success_rate"] == pytest.approx(8 / 10)
     assert d["run"]["status"] == "degraded"
     assert len(d["error_episodes"]) == 1

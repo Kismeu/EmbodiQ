@@ -77,3 +77,41 @@ kwargs silently drops them. Our backend does the same introspection.
 - Quantization deltas use a **paired** test on identical initial states
   (`protocol.mcnemar_delta`), never two independent Wilson intervals.
   Independent Wilson (`protocol.wilson_ci95`) is only for FP16-vs-published.
+
+## Amendment, 2026-10-04: the temporal-prediction switch is now explicit
+
+The table above is unchanged, but the FastWAM row's "runtime switch" is no longer
+implicit. `eval_libero_single` forwards `action_infer_mode` only when the loaded
+class declares it and defaults it to `"idm"`, so the uncond checkpoint runs
+first-frame no matter what the config says. The adapter therefore:
+
+* takes `action_infer_mode` explicitly (`--fastwam-mode {first_frame,idm}`),
+* asserts after load that the loaded class can actually run the requested mode
+  (`idm` needs both `action_infer_mode` and `num_video_frames` in the signature),
+  and refuses rather than silently running first-frame under an idm label,
+* records `native_dispatch` as `explicit_kwarg` or
+  `absent_kwarg_base_class_is_first_frame`, so a result file states how the mode
+  was achieved instead of being taken on trust,
+* puts the mode in `PolicySpec.model_id`, so an idm row and a first-frame row can
+  never merge into one matrix row.
+
+The 1.4 main matrix is fixed at `first_frame`. The idm path is adapted and
+asserted but not part of the 48 cells.
+
+Two metric definitions above also have implementation notes worth carrying:
+
+* `nvml_peak_bytes` is only a deployment figure once the allocator pool has been
+  returned after in-process quantization. Results written before
+  `embodiq/run_result/3` report the bf16 load phase there; read
+  `peak_alloc_bytes` for those. See `README.md` §4.1.
+* `weights_bytes` landing in [0.28, 0.40] of fp16 holds for the int4 scope only.
+  The whole-model ratio is lower and both are reported — `compression_in_scope`
+  alongside `quantized_param_fraction` — because the three models quantize very
+  different fractions of themselves (OpenVLA 87.4%, FastWAM 55.5%).
+
+
+## 2026-10-09 收尾更新
+
+IDM 现已选择 `libero_optional_idm_2cam224_1e-4` 配置，并用 OptionalIDM 权重完成真实查询和一个 Spatial 回合验证：动作 (32,7)，执行 10 步；未来视频 latent 时间维为 3，查询去噪 10 次；回合成功，70 步、7 次查询。证据见 [收尾报告](framework_closeout_20261009.md)。主矩阵仍固定 first-frame。
+
+主表资源改为固定输入专测，加载期与稳态分开；缺失或不匹配的资源专测留白，旧闭环指标只作独立记录。动作步摊销推理耗时不包含全部环境与通信开销，不等同于机器人端到端控制延迟。

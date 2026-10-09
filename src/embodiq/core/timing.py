@@ -90,6 +90,7 @@ class LatencyAccumulator:
                 "std": statistics.pstdev(q) if len(q) > 1 else 0.0,
                 "p50": pct(0.50),
                 "p90": pct(0.90),
+                "p95": pct(0.95),
                 "p99": pct(0.99),
                 "min": q[0],
                 "max": q[-1],

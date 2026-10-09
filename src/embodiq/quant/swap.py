@@ -31,6 +31,13 @@ from embodiq.quant.spec import LayerRecord, QuantReport, QuantSpec
 # ~0 means nothing was actually quantized.
 INT4_REL_ERR_BAND = (0.005, 0.35)
 INT8_REL_ERR_BAND = (0.0001, 0.05)
+# An HSA module restores a slice of its input channels exactly, so its
+# reconstruction error sits BELOW the plain-RTN band by design. Keeping the
+# upper bound catches a broken layout; the lower bound is relaxed because
+# "almost no error" is the intended outcome here, not a sign of a no-op swap --
+# the residual-bearing layers are separately asserted to be non-empty by
+# quant.artifact._check_method_shape.
+INT4_RESIDUAL_REL_ERR_BAND = (0.0, 0.35)
 
 
 @dataclass
@@ -83,12 +90,14 @@ def apply_report(
     *,
     input_scales: Optional[Mapping[str, torch.Tensor]] = None,
     residuals: Optional[Mapping[str, tuple[torch.Tensor, torch.Tensor]]] = None,
+    clips: Optional[Mapping[str, torch.Tensor]] = None,
     verify: bool = True,
 ) -> SwapResult:
     """Swap in the modules the plan decided on. Checkpoint must ALREADY be loaded."""
     res = SwapResult(fingerprint_before=param_fingerprint(roots))
     input_scales = input_scales or {}
     residuals = residuals or {}
+    clips = clips or {}
     by_name = {r.name: r for r in report.layers}
 
     for name, rec in by_name.items():
@@ -116,9 +125,10 @@ def apply_report(
             new = QuantLinear.from_linear(
                 linear, rec.group_size,
                 input_scale=input_scales.get(name),
+                clip_max=clips.get(name),
                 residual_idx=ridx, residual_val=rval,
             )
-            band = INT4_REL_ERR_BAND
+            band = INT4_RESIDUAL_REL_ERR_BAND if ridx is not None else INT4_REL_ERR_BAND
             if ridx is not None:
                 rec.residual_units = int(ridx.numel())
                 rec.residual_bytes = int(rval.numel() * 2)

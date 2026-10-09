@@ -107,6 +107,23 @@ class VLAAdapterPolicy(Policy):
         )
         self.model = self.action_head = self.proprio_projector = self.processor = None
 
+    def quantization_roots(self) -> dict[str, object]:
+        """Expose all roots that belong to this policy.
+
+        The action head and proprio projector are loose modules outside the HF
+        model.  Keeping this mapping on the adapter lets RTN/AWQ/HSA share one
+        quantizer API without embedding model-specific root logic in the
+        quantization backends.
+        """
+        if self.model is None:
+            raise RuntimeError("load the policy before requesting quantization roots")
+        roots: dict[str, object] = {"model": self.model}
+        if self.action_head is not None:
+            roots["action_head"] = self.action_head
+        if self.proprio_projector is not None:
+            roots["proprio_projector"] = self.proprio_projector
+        return roots
+
     # -- lifecycle -------------------------------------------------------
     def load(self) -> None:
         from embodiq.backends.compat import adapter_freeze
@@ -134,12 +151,7 @@ class VLAAdapterPolicy(Policy):
         # a load renames weight -> packed/scales_zeros, and a strict=False load
         # then silently drops every quantized tensor and leaves random init.
         if self.quant_apply is not None:
-            roots = {"model": self.model}
-            if self.action_head is not None:
-                roots["action_head"] = self.action_head
-            if self.proprio_projector is not None:
-                roots["proprio_projector"] = self.proprio_projector
-            self.quant_report = self.quant_apply(roots, "vla_adapter")
+            self.quant_report = self.quant_apply(self.quantization_roots(), "vla_adapter")
 
         self._probe.mark_after_load()
 

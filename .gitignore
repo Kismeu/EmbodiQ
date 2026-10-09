@@ -5,6 +5,44 @@ __pycache__/
 /calib/
 /sens/
 /logs/
+/releases/
 *.pt
 *.safetensors
 *.npy
+
+# Local experiment snapshots and downloaded upstream repositories
+/experiments/
+
+# Build, test and editor artifacts
+/build/
+/dist/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+.DS_Store
+.vscode/
+.idea/
+
+# Local credentials and machine-specific overrides
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+configs/*.local.json
+configs/*.local.yaml
+
+# Model / dataset assets
+*.pth
+*.ckpt
+*.bin
+*.hdf5
+*.h5
+*.npz
+
+# Raw browser recordings; only curated demo assets are versioned
+/demo/recordings/
+
+# Curated MP4 is published; keep raw WebM locally
+/docs/media/*.webm

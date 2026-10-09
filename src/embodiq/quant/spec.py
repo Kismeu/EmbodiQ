@@ -88,7 +88,11 @@ class HSASpec:
     # changes the main branch's quantization error -- so the HSA main branch would
     # no longer be the same object as the AWQ row it is compared against.
     residual_impl: Literal["gather"] = "gather"
-    residual_dtype: str = "float16"
+    # bfloat16, not float16: the buffer is registered bf16 in QuantLinear and
+    # matches the activation dtype, which avoids an overflow path on the
+    # scaled-domain residual. The field said float16 while the code stored
+    # bf16 until 2026-10-05.
+    residual_dtype: str = "bfloat16"
     layer_sens: Literal["leave_one_in", "fisher", "uniform"] = "leave_one_in"
     max_per_layer_rho: float = 0.08
     align_k: int = 8

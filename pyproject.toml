@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "embodiq"
 version = "0.1.0"
 description = "Unified quantization adaptation + LIBERO evaluation harness for VLA / WAM models"
+readme = "README.md"
 requires-python = ">=3.10"
 # embodiq.core is numpy-only on purpose: it is vendored into three mutually
 # incompatible conda prefixes (torch 2.2/numpy 1.26 and torch 2.7/numpy 2.2).
@@ -13,7 +14,7 @@ dependencies = ["numpy>=1.26"]
 
 [project.optional-dependencies]
 quant = ["torch>=2.2", "safetensors>=0.4"]
-ctl = ["pyyaml>=6", "pandas>=2"]
+ctl = ["pyyaml>=6", "pandas>=2", "matplotlib>=3.4"]
 nvml = ["nvidia-ml-py>=12"]
 
 [project.scripts]
@@ -25,3 +26,14 @@ include = ["embodiq*"]
 
 [tool.setuptools.package-data]
 "embodiq.core" = ["schema/*.json"]
+"embodiq.web" = ["static/*.html", "static/*.css", "static/*.js"]
+
+[tool.pytest.ini_options]
+# The repository keeps historical stage snapshots under experiments/.  They
+# intentionally contain tests with the same module names as the live suite;
+# collecting every directory makes pytest import one snapshot and then reject
+# the next one as an import-file mismatch.  The live gate is the root tests/
+# directory only.  Its tests use sibling absolute imports, so add tests/ to
+# sys.path while retaining the normal prepend import mode.
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]

@@ -23,7 +23,7 @@ import pytest
 FIXTURE = Path(__file__).parent / "fixtures" / "adapter" / "libero_spatial_task0.pkl"
 CKPT = os.environ.get(
     "EMBODIQ_ADAPTER_CKPT",
-    "/data/jyc/space/Embodied AI/checkpoints/vla-adapter/LIBERO-Spatial-Pro",
+    os.environ.get("EMBODIQ_CKPT_ROOT", "/data/jyc/data/VLA-Adapter") + "/LIBERO-Spatial-Pro",
 )
 
 pytestmark = pytest.mark.skipif(
@@ -38,6 +38,9 @@ def policy():
 
     if not torch.cuda.is_available():
         pytest.skip("needs CUDA")
+    import importlib.util
+    if importlib.util.find_spec("experiments.robot") is None:
+        pytest.skip("needs the VLA-Adapter repository on PYTHONPATH")
     from embodiq.backends.adapter.policy import VLAAdapterPolicy
 
     p = VLAAdapterPolicy(CKPT, "libero_spatial", device_index=0)

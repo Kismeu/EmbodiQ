@@ -1,0 +1,22 @@
+5d70e76161d92fa962c53e78e10b4af3426b6ec7e5c0ea872e7a8162c961a8d3  /data/jyc/data/VLA-Adapter/LIBERO-Spatial-Pro/model.safetensors
+c83c07b9c1d4b527ba5d0f821b28c340c745f4aec282a4953511d494c536d604  /data/jyc/data/VLA-Adapter/LIBERO-Object-Pro/model.safetensors
+559ccfdec78abefe4c81dffc54d00b8f6393fd762828ecd060cacaab20abf4e1  /data/jyc/data/VLA-Adapter/LIBERO-Goal-Pro/model.safetensors
+4fc1bad62d41cf67bc24dedbf382574fc4aa59b06df86618e446c473fce27840  /data/jyc/data/VLA-Adapter/LIBERO-Long-Pro/model.safetensors
+094ba8d798d0e13152230897e893d4d12ca3fe11ddb218f27545b1e6e7536134  /data/jyc/models/openvla-7b-finetuned-libero-spatial/model-00001-of-00004.safetensors
+086780bb21b61eee9fb54acc0b938017c599e9d741bcdda18da23c4617fa36d7  /data/jyc/models/openvla-7b-finetuned-libero-spatial/model-00002-of-00004.safetensors
+d696e042cf49abd0b5846e73cbd4931d75a5467ae44857bf8e54a90ed6588308  /data/jyc/models/openvla-7b-finetuned-libero-spatial/model-00003-of-00004.safetensors
+234f92229d4055749c17e904e4d3f1c9a9af3eb13f96f14eaaa4530c0c376473  /data/jyc/models/openvla-7b-finetuned-libero-spatial/model-00004-of-00004.safetensors
+1748e2921c82a8b80febb9a0d7f1659c556b0769ff54225c5f1905fcd47d5107  /data/jyc/models/openvla-7b-finetuned-libero-object/model-00001-of-00004.safetensors
+1a468feb31f2edbe8876c8571e5682406aeb169b80916d5952408a6fb20f017c  /data/jyc/models/openvla-7b-finetuned-libero-object/model-00002-of-00004.safetensors
+f4958ff679f5d7f600a2369b52ee81818e9992fb6584e40ba6f79e1f786f6e1d  /data/jyc/models/openvla-7b-finetuned-libero-object/model-00003-of-00004.safetensors
+eccbc0482e076cf5a502b51707e0581c19a111e376206febd5d0c4efe6f74b09  /data/jyc/models/openvla-7b-finetuned-libero-object/model-00004-of-00004.safetensors
+53694ea749b921d476d55e3b519277f308f93bea324c59c91cddd27a2a3bcf17  /data/jyc/data/VLA-Adapter/LIBERO-Goal-Pro/action_head--checkpoint.pt
+740608616d153f4ab5c335dd1d49a221554033761eefc0ff437358eaf54c135d  /data/jyc/data/VLA-Adapter/LIBERO-Long-Pro/action_head--checkpoint.pt
+dd5642994a89f81dfe33cdca460479972548de8eaa26aacdbb3b0a7516b2d723  /data/jyc/data/VLA-Adapter/LIBERO-Object-Pro/action_head--checkpoint.pt
+76aa486231ebce057aa398dc5fcecf71698b293bdcc16d7354e1ac8cb807bdb9  /data/jyc/data/VLA-Adapter/LIBERO-Spatial-Pro/action_head--checkpoint.pt
+27071491d1bb63385a215582915f9b5e8f167de39895950b29456ad6c1e00a5d  /data/jyc/data/VLA-Adapter/LIBERO-Goal-Pro/proprio_projector--checkpoint.pt
+17525f46b6df034b12c9fae2619442ff8520ee7f19c240c5e62643a4a3d0b793  /data/jyc/data/VLA-Adapter/LIBERO-Long-Pro/proprio_projector--checkpoint.pt
+3201fd9f18cb178958d656ac2ddd7163f8a7853535856243907f5b633af7c14c  /data/jyc/data/VLA-Adapter/LIBERO-Object-Pro/proprio_projector--checkpoint.pt
+1c61a08975ffade832a2dbfa0587ef6b109ec27f66eb8124f02727aa9827008e  /data/jyc/data/VLA-Adapter/LIBERO-Spatial-Pro/proprio_projector--checkpoint.pt
+1000437cfcf55c000094f79a2600634c502bcb5b492476b94bf8509883a49579  /data/jyc/space/Embodied AI/FastWAM/checkpoints/fastwam_release/libero_uncond_2cam224.pt
+26b4efffded221b9a303ca8f2cddb9999c8b7524e2751c855c74a986242ce8b4  /data/jyc/space/Embodied AI/FastWAM/checkpoints/fastwam_release/libero_optional_idm_2cam224.pt

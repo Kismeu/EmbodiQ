@@ -43,6 +43,11 @@ SCOPE_RULES: dict[str, list[ScopeRule]] = {
         (r"^fc[12]$", "proprio"),
     ],
     "fastwam": [
+        # Real FastWAM registers these aliases before mot/dit. named_modules()
+        # deduplicates shared experts and exposes the first registered names.
+        (r"^video_expert\.blocks\.", "video_dit"),
+        (r"^action_expert\.blocks\.", "action_dit"),
+        (r"^(video_expert|action_expert)\.(text_embedding|time_embedding|time_projection|head|action_encoder)", "dit_io"),
         (r"^mot\.mixtures\.video\.blocks\.", "video_dit"),
         (r"^mot\.mixtures\.action\.blocks\.", "action_dit"),
         (r"^mot\.mixtures\.\w+\.(text_embedding|time_embedding|time_projection|head|action_encoder)", "dit_io"),

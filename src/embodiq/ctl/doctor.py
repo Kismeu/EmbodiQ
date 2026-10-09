@@ -16,7 +16,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-EMB_ROOT = Path(os.environ.get("EMB_ROOT", "/data/jyc/space/Embodied AI"))
+# Derived from this file rather than hardcoded: a literal here is what broke
+# every tool when the project directory was renamed. The env override stays.
+EMB_ROOT = Path(os.environ.get("EMB_ROOT") or Path(__file__).resolve().parents[4])
 
 EXPECTED = {
     "openvla": {

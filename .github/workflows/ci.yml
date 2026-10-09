@@ -1,0 +1,24 @@
+name: CPU contracts
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - run: python -m pip install -e '.[ctl]' pytest
+      - name: Validate configs, task contracts and report admission
+        env:
+          CUDA_VISIBLE_DEVICES: ''
+          PYTHONPATH: src
+        run: >-
+          python -m pytest -q
+          tests/test_config.py tests/test_controller_status.py
+          tests/test_contract_and_rollout.py tests/test_report_matrix.py
+      - run: python -m embodiq.ctl.cli launch configs/stage_fp16_rtn.json --profile smoke --dry-run

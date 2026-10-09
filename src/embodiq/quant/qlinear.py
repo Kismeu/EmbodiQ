@@ -95,6 +95,7 @@ class QuantLinear(nn.Module):
         group_size: int = 128,
         *,
         input_scale: Optional[torch.Tensor] = None,   # AWQ s, per input channel
+        clip_max: Optional[torch.Tensor] = None,      # bounds in scaled-weight domain [N,K/g]
         residual_idx: Optional[torch.Tensor] = None,  # HSA support set
         residual_val: Optional[torch.Tensor] = None,  # [out, k] fp16
     ) -> "QuantLinear":
@@ -102,9 +103,26 @@ class QuantLinear(nn.Module):
         dev = w.device
         m = cls(linear.in_features, linear.out_features, group_size)
 
+        # Artifact tensors arrive on CPU (torch.load(map_location="cpu")) while
+        # the weights are already on the GPU, so every one of them is moved onto
+        # the weight's device ONCE, here. Doing it per use site is how
+        # `input_scale` ended up multiplying a cuda tensor by a cpu one.
+        if input_scale is not None:
+            input_scale = input_scale.to(dev)
+        if clip_max is not None:
+            clip_max = clip_max.to(dev)
+        if residual_idx is not None:
+            residual_idx = residual_idx.to(dev)
+        if residual_val is not None:
+            residual_val = residual_val.to(dev)
+
         w_eff = w.to(torch.float32)
         if input_scale is not None:
             w_eff = w_eff * input_scale.to(torch.float32).unsqueeze(0)
+        if clip_max is not None:
+            bounds=clip_max.to(dtype=torch.float32).unsqueeze(-1)
+            grouped=w_eff.reshape(linear.out_features,-1,group_size)
+            w_eff=grouped.clamp(-bounds,bounds).reshape_as(w_eff)
 
         q, s, z = group_quantize_int4(w_eff, group_size)
         packed, sz = to_tinygemm(q, s, z, group_size)

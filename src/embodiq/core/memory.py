@@ -16,6 +16,16 @@ from typing import Optional
 from embodiq.core.types import MemoryReport
 
 
+def nvml_device_index(device_index=0):
+    """Resolve CUDA logical numbering through the installed PyTorch runtime.
+
+    Both supported PyTorch versions provide this helper; unlike direct NVML
+    indexing it respects CUDA_VISIBLE_DEVICES, including GPU UUID selection.
+    """
+    import torch
+    return torch.cuda._get_nvml_device_index(device_index)
+
+
 class MemoryProbe:
     """torch allocator counters plus an NVML sampler thread."""
 
@@ -27,6 +37,12 @@ class MemoryProbe:
         self._thread: Optional[threading.Thread] = None
         self._weights_bytes = 0
         self._baseline = 0
+        self._load_peak_alloc = 0
+        self._load_peak_reserved = 0
+        self._load_nvml_peak = 0
+        self._cache_released = 0
+        self._nvml_handle = None
+        self._nvml_lock = threading.Lock()
 
     # -- torch allocator -------------------------------------------------
     def _torch(self):
@@ -48,15 +64,48 @@ class MemoryProbe:
     def mark_after_load(self) -> None:
         """Delta across load() == resident parameters AFTER quantization.
 
-        Only meaningful if the model was built on CPU and moved to GPU already
-        quantized. Quantizing in place on the GPU reports the fp16 peak and the
-        whole VRAM column becomes meaningless.
+        Also closes the measurement hole this class used to warn about in prose:
+        quantization runs in-process on the GPU, so by the time we get here the
+        caching allocator is still holding every block the bf16 checkpoint
+        needed. ``reset_peak_memory_stats`` zeroes the *counters* but not the
+        *pool*, and NVML reports the process's real reservation -- so the next
+        sample reads the load-phase footprint straight back and the whole VRAM
+        column reports the original precision.
+
+        So: record the load-phase peaks, hand the pool back to the driver, then
+        start the steady-state measurement from a clean baseline.
         """
         t = self._torch()
         if t is None:
             return
         t.cuda.synchronize(self.device_index)
+
+        # 1. the load phase is a real, separately reported number
+        self._sample_nvml()
+        self._load_peak_alloc = t.cuda.max_memory_allocated(self.device_index)
+        self._load_peak_reserved = t.cuda.max_memory_reserved(self.device_index)
+        self._load_nvml_peak = self._nvml_peak
+
         delta = t.cuda.memory_allocated(self.device_index) - self._baseline
+
+        # 2. release the bf16-sized pool. empty_cache() frees only blocks with
+        #    no live tensors, so this cannot disturb the quantized weights; it
+        #    just stops them being counted twice.
+        import gc
+
+        reserved_before = t.cuda.memory_reserved(self.device_index)
+        gc.collect()
+        t.cuda.empty_cache()
+        t.cuda.synchronize(self.device_index)
+        self._cache_released = max(
+            0, reserved_before - t.cuda.memory_reserved(self.device_index))
+
+        # 3. steady state starts here
+        t.cuda.reset_peak_memory_stats(self.device_index)
+        with self._nvml_lock:
+            self._nvml_peak = 0
+        self._sample_nvml()
+
         if delta <= 0:
             raise RuntimeError(
                 f"weights_bytes came out {delta} -- the allocator baseline was "
@@ -73,6 +122,16 @@ class MemoryProbe:
         if t is not None:
             t.cuda.synchronize(self.device_index)
             t.cuda.reset_peak_memory_stats(self.device_index)
+        # Reset sampled process memory too; otherwise load/compile peaks leak
+        # into the inference-only measurement. empty_cache() again here because
+        # warmup allocates its own transients, and a sample taken between warmup
+        # and the first episode would otherwise carry them into the peak.
+        if t is not None:
+            t.cuda.empty_cache()
+            t.cuda.synchronize(self.device_index)
+        with self._nvml_lock:
+            self._nvml_peak = 0
+        self._sample_nvml()
 
     # -- NVML sampler ----------------------------------------------------
     def start(self) -> None:
@@ -82,24 +141,33 @@ class MemoryProbe:
             return
         try:
             pynvml.nvmlInit()
+            handle = pynvml.nvmlDeviceGetHandleByIndex(nvml_device_index(self.device_index))
         except Exception:
             return
-        pid = os.getpid()
-        handle = pynvml.nvmlDeviceGetHandleByIndex(self.device_index)
-        interval = 1.0 / self.sampler_hz
+        self._nvml_handle = handle
 
         def loop() -> None:
-            while not self._stop.wait(interval):
-                try:
-                    procs = pynvml.nvmlDeviceGetComputeRunningProcesses(handle)
-                except Exception:
-                    continue
-                for p in procs:
-                    if p.pid == pid and p.usedGpuMemory:
-                        self._nvml_peak = max(self._nvml_peak, int(p.usedGpuMemory))
+            # Resource benchmarks may select a faster steady-state cadence
+            # after loading. Read the current setting on every iteration.
+            while not self._stop.wait(1.0 / self.sampler_hz):
+                self._sample_nvml()
 
         self._thread = threading.Thread(target=loop, daemon=True, name="nvml-sampler")
         self._thread.start()
+
+    def _sample_nvml(self) -> None:
+        """Also sample at measurement boundaries: a query can be < one tick."""
+        if self._nvml_handle is None:
+            return
+        import pynvml
+        with self._nvml_lock:
+            try:
+                procs = pynvml.nvmlDeviceGetComputeRunningProcesses(self._nvml_handle)
+                for proc in procs:
+                    if proc.pid == os.getpid() and proc.usedGpuMemory:
+                        self._nvml_peak = max(self._nvml_peak, int(proc.usedGpuMemory))
+            except Exception:
+                pass
 
     def stop(self) -> None:
         self._stop.set()
@@ -114,10 +182,15 @@ class MemoryProbe:
             t.cuda.synchronize(self.device_index)
             peak_alloc = t.cuda.max_memory_allocated(self.device_index)
             peak_reserved = t.cuda.max_memory_reserved(self.device_index)
+        self._sample_nvml()
         return MemoryReport(
             weights_bytes=self._weights_bytes,
             peak_alloc_bytes=peak_alloc,
             peak_reserved_bytes=peak_reserved,
             nvml_peak_bytes=self._nvml_peak,
             device_index=self.device_index,
+            load_peak_alloc_bytes=self._load_peak_alloc,
+            load_peak_reserved_bytes=self._load_peak_reserved,
+            load_nvml_peak_bytes=self._load_nvml_peak,
+            cache_released_bytes=self._cache_released,
         )

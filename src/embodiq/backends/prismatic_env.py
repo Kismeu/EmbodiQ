@@ -47,16 +47,27 @@ class PrismaticEnvFactory:
     def initial_states(self, suite: str, task_id: int, n: int) -> np.ndarray:
         """Deterministic starts.
 
-        The benchmark API and FastWAM's ``torch.load(init_states_file)`` read the
-        same ``.pruned_init`` tensor; ``embodiq.core.suites`` asserts that. Here
-        we use the benchmark API and cycle if fewer states exist than trials,
-        matching FastWAM's behaviour so the two protocols stay comparable.
+        All model factories read the same trusted local .pruned_init asset.
+        Refuse excess trials rather than silently repeating initial states.
         """
-        states = self._suite(suite).get_task_init_states(task_id)
-        if len(states) >= n:
-            return states[:n]
-        reps = int(np.ceil(n / len(states)))
-        return np.concatenate([states] * reps, axis=0)[:n]
+        import torch
+        states = np.asarray(torch.load(self.initial_state_path(suite, task_id),
+                                      map_location="cpu", weights_only=False))
+        if states.ndim != 2 or len(states) == 0 or not np.isfinite(states).all() or n < 1:
+            raise ValueError("Invalid LIBERO initial states or trial count")
+        if n > len(states):
+            raise ValueError("Requested trials exceed distinct initial states; do not silently repeat")
+        return states[:n]
+
+    def initial_state_path(self, suite, task_id):
+        from pathlib import Path
+        from libero.libero import get_libero_path
+        task = self._suite(suite).get_task(task_id)
+        root = Path(get_libero_path("init_states")).resolve()
+        path = (root / task.problem_folder / task.init_states_file).resolve()
+        if not path.is_relative_to(root):
+            raise ValueError("Initial states must be local LIBERO assets")
+        return path
 
     def task_description(self, suite: str, task_id: int) -> str:
         return self._suite(suite).get_task(task_id).language

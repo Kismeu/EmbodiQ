@@ -1,0 +1,97 @@
+{
+  "schema": "embodiq/experiment-config/1",
+  "project": "task14",
+  "protocol": "unified.v3",
+  "seed": 42,
+  "trials_per_task": 50,
+  "checkpoint_every": 1,
+  "save_videos": false,
+  "benchmark": {
+    "name": "libero",
+    "suites": [
+      "libero_spatial",
+      "libero_object",
+      "libero_goal",
+      "libero_10"
+    ]
+  },
+  "resource": {
+    "measure": true,
+    "exclusive_gpu_required": true,
+    "fixed_input_manifest": "results/resource_bench/inputs_v1.json"
+  },
+  "runtime": {
+    "fastwam_mode": "first_frame",
+    "compile_action_infer": false,
+    "hsa_enabled": false
+  },
+  "models": {
+    "openvla": {
+      "repo_env": "openvla",
+      "repo_root": "${EMB_ROOT}/OpenVLA",
+      "checkpoint_root": "${OPENVLA_ROOT}",
+      "scopes": [
+        "llm"
+      ]
+    },
+    "vla_adapter": {
+      "repo_env": "vlaadapter",
+      "repo_root": "${EMB_ROOT}/VLA-Adapter",
+      "checkpoint_root": "${DATA_ROOT}/VLA-Adapter",
+      "scopes": [
+        "llm",
+        "vision_dino",
+        "vision_siglip",
+        "projector",
+        "action_head"
+      ]
+    },
+    "fastwam": {
+      "repo_env": "fastwam",
+      "repo_root": "${EMB_ROOT}/FastWAM",
+      "checkpoint": "${EMB_ROOT}/FastWAM/checkpoints/fastwam_release/libero_uncond_2cam224.pt",
+      "dataset_stats": "${EMB_ROOT}/FastWAM/checkpoints/fastwam_release/libero_uncond_2cam224_dataset_stats.json",
+      "scopes": [
+        "video_dit",
+        "action_dit"
+      ]
+    }
+  },
+  "quantization": {
+    "fp16": {
+      "method": "fp16",
+      "enabled": true
+    },
+    "rtn": {
+      "method": "rtn",
+      "enabled": true,
+      "w_bit": 4,
+      "group_size": 128
+    },
+    "awq": {
+      "method": "awq",
+      "enabled": true,
+      "implementation": "public_awq_adapter_pending",
+      "w_bit": 4,
+      "group_size": 128,
+      "calibration_manifest": "calib/observations_training_v1/status.json",
+      "artifact_root": "artifacts/awq_public"
+    },
+    "hsa": {
+      "method": "hsa",
+      "enabled": false,
+      "status": "pending_external_implementation",
+      "w_bit": 4,
+      "group_size": 128
+    }
+  },
+  "outputs": {
+    "root": "results/managed_runs",
+    "matrix_root": "results/matrix"
+  },
+  "enabled_methods": [
+    "fp16",
+    "rtn"
+  ],
+  "name": "stage_fp16_rtn"
+}

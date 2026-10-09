@@ -9,12 +9,9 @@ The record is a strict SUPERSET of FastWAM's per-task JSON, which means
 ``FastWAM/experiments/libero/summarize_results.py`` reads our files unmodified.
 That is a free cross-check on every aggregation we write.
 
-One deliberate divergence: FastWAM's summarizer computes
-``successes / total_episodes`` while we compute ``successes / (total - n_error)``.
-The gap between the two numbers is exactly the error count, so running both is
-itself a check that errors are being surfaced rather than silently scored as
-failures. Verified: 48 success / 1 timeout / 1 OOM gives 96.00% from FastWAM's
-summarizer and 97.96% from ours.
+Schema v2 counts model errors as failures while retaining diagnostic details.
+Environment errors are invalid trials; incomplete/degraded runs must not enter
+the final aggregate. OOM remains a fatal infrastructure error in the runner.
 """
 
 from __future__ import annotations
@@ -32,7 +29,10 @@ from embodiq.core.protocol import mcnemar_delta, wilson_ci95
 from embodiq.core.timing import LatencyAccumulator
 from embodiq.core.types import EpisodeRecord, EpisodeStatus, MemoryReport, PolicySpec
 
-SCHEMA_VERSION = "embodiq/run_result/1"
+# /3 adds the load-phase memory attribution (load_peak_*, cache_released_bytes)
+# and the AWQ/HSA artifact identity under quant.artifact. schema/2 files are
+# left as they are; tools must branch on this field, not assume.
+SCHEMA_VERSION = "embodiq/run_result/3"
 
 
 class _NumpyEncoder(json.JSONEncoder):
@@ -73,7 +73,7 @@ class TaskResult:
     # -- derived ---------------------------------------------------------
     @property
     def n_error(self) -> int:
-        return sum(1 for e in self.episodes if not e.counts_toward_success_rate)
+        return sum(1 for e in self.episodes if e.status in (EpisodeStatus.POLICY_ERROR, EpisodeStatus.ENV_ERROR))
 
     @property
     def n_success(self) -> int:
@@ -107,13 +107,11 @@ class TaskResult:
             "duration": self.duration,
             "worker_id": self.worker_id,
             # --- embodiq extensions ---
-            # Errors are held OUT of successes/failure_episodes on purpose: an
-            # OOM or a broken quantized kernel must never be counted as a policy
-            # failure, or every success-rate delta becomes uninterpretable.
+            # Diagnostics remain separate even when model errors are scored.
             "error_episodes": [
                 {"episode_idx": e.episode_idx, "status": e.status.value, "error": e.error}
                 for e in self.episodes
-                if not e.counts_toward_success_rate
+                if e.status in (EpisodeStatus.POLICY_ERROR, EpisodeStatus.ENV_ERROR)
             ],
             "run": {
                 "status": self.status,
@@ -147,6 +145,8 @@ class TaskResult:
                 "n_success": self.n_success,
                 "n_timeout": sum(1 for e in self.episodes if e.status is EpisodeStatus.TIMEOUT),
                 "n_error": self.n_error,
+                "n_policy_error": sum(e.status is EpisodeStatus.POLICY_ERROR for e in self.episodes),
+                "n_invalid": sum(e.status is EpisodeStatus.ENV_ERROR for e in self.episodes),
                 "success_rate": (self.n_success / self.n_scored) if self.n_scored else None,
                 "success_ci95": [lo, hi],
                 "latency": self.latency.summary(replan),
@@ -158,13 +158,46 @@ class TaskResult:
             },
         }
 
+    def result_path(self, output_root: Path) -> Path:
+        return (Path(output_root) / self.task_suite
+                / f"gpu{self.gpu_id}_task{self.task_id}_results.json")
+
+    def partial_path(self, output_root: Path) -> Path:
+        """Where the in-flight checkpoint lives. Leading dot so a stray partial
+        can never be mistaken for a finished task by the ``*_results.json`` globs
+        every tool uses."""
+        return (Path(output_root) / self.task_suite
+                / f".gpu{self.gpu_id}_task{self.task_id}_partial.json")
+
     def write(self, output_root: Path) -> Path:
         """Atomic write, mirroring FastWAM's tmp+os.replace and filename layout."""
-        d = Path(output_root) / self.task_suite
-        d.mkdir(parents=True, exist_ok=True)
-        out = d / f"gpu{self.gpu_id}_task{self.task_id}_results.json"
-        tmp = d / f".{out.name}.{os.getpid()}.tmp"
+        out = self.result_path(output_root)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        tmp = out.parent / f".{out.name}.{os.getpid()}.tmp"
         tmp.write_text(json.dumps(self.to_dict(), indent=4, cls=_NumpyEncoder), encoding="utf-8")
+        os.replace(tmp, out)
+        # The task is finished; its checkpoint is now noise that could only
+        # confuse a later resume.
+        self.partial_path(output_root).unlink(missing_ok=True)
+        return out
+
+    def write_partial(self, output_root: Path) -> Path:
+        """Checkpoint after an episode, so a stop costs one episode not one task.
+
+        Carries the same identity fields a finished result carries, because a
+        partial is only safe to resume from when the policy, quantization,
+        protocol, code and environment all still match -- see
+        ``core.resume.validate_partial``. The per-episode query latencies ride
+        along inside each EpisodeRecord, so the accumulator can be rebuilt and
+        the task's latency summary still covers all of its episodes.
+        """
+        out = self.partial_path(output_root)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        payload = self.to_dict()
+        payload["partial"] = True
+        payload["episodes_completed"] = len(self.episodes)
+        tmp = out.parent / f"{out.name}.{os.getpid()}.tmp"
+        tmp.write_text(json.dumps(payload, indent=1, cls=_NumpyEncoder), encoding="utf-8")
         os.replace(tmp, out)
         return out
 

@@ -8,7 +8,7 @@ comparable once these are named and pinned.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal, Mapping, Optional
 
 SUITES = ("libero_spatial", "libero_object", "libero_goal", "libero_10")
@@ -39,6 +39,7 @@ class RolloutProtocol:
     replan_steps: Optional[int] = None
     binarize_gripper: bool = True
     save_videos: bool = False
+    reseed_each_episode: bool = False
 
     def steps_for(self, suite: str) -> int:
         return self.max_steps[SUITE_ALIASES.get(suite, suite)]
@@ -65,7 +66,7 @@ PROTOCOLS: dict[str, RolloutProtocol] = {
     ),
     "official.fastwam": RolloutProtocol(
         name="official.fastwam", max_steps=_FASTWAM_STEPS, num_steps_wait=30, env_resolution=256,
-        num_trials_per_task=50, initial_state_source="init_states_file", seed_base=0,
+        num_trials_per_task=50, initial_state_source="init_states_file", seed_base=42,
         episode_seed_fn="constant", replan_steps=10,
     ),
     # Union-maximum step budget and the longer settle time. Shortening would cut
@@ -78,6 +79,13 @@ PROTOCOLS: dict[str, RolloutProtocol] = {
         episode_seed_fn="constant", replan_steps=None,
     ),
 }
+
+PROTOCOLS["unified.v2"] = RolloutProtocol(
+    name="unified.v2", max_steps=_FASTWAM_STEPS, num_steps_wait=30,
+    env_resolution=256, num_trials_per_task=50, initial_state_source="init_states_file",
+    seed_base=0, episode_seed_fn="constant", replan_steps=None, reseed_each_episode=True,
+)
+PROTOCOLS["unified.v3"] = replace(PROTOCOLS["unified.v2"], name="unified.v3", seed_base=42)
 
 # Screening tier: 10 trials/task = 100 eps/suite, 1/5 the cost. Decides; does not
 # publish. At p~0.85 the Wilson half-width is +/-3.6 pts at 100 eps vs +/-1.6 at
