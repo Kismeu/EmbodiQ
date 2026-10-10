@@ -50,6 +50,8 @@ class Workbench:
             raise APIError(404, '找不到该运行')
         if p.read(path / 'run.json').get('schema') != p.SCHEMA:
             raise APIError(400, '仅支持统一自动评测运行')
+        if p.read(path / 'plan.json')['config'].get('profile', 'formal') != 'formal':
+            raise APIError(404, '该记录不属于正式评测')
         return path
 
     def capabilities(self):
@@ -66,13 +68,14 @@ class Workbench:
             value = body.get(field)
             if not isinstance(value, list) or not value or any(not isinstance(x, str) for x in value):
                 raise APIError(400, f'{field} 必须是非空列表')
-        if body.get('profile') not in {'smoke', 'formal'}:
-            raise APIError(400, '请选择 smoke 或 formal')
+        if body.get('profile', 'formal') != 'formal':
+            raise APIError(400, '仅支持正式评测')
         gpu, wait = body.get('gpu', 0), body.get('wait_seconds', 0)
         if type(gpu) is not int or not 0 <= gpu <= 255 or type(wait) is not int or not 0 <= wait <= 86400:
             raise APIError(400, 'GPU 需为 0–255 的整数，等待秒数需为 0–86400 的整数')
         try:
-            cfg = p.prepare_config(self.config, **{k: body[k] for k in ('models', 'methods', 'suites', 'profile')})
+            cfg = p.prepare_config(self.config, profile='formal',
+                                   **{k: body[k] for k in ('models', 'methods', 'suites')})
         except (ValueError, KeyError, TypeError) as exc:
             raise APIError(400, str(exc)) from exc
         return cfg, gpu, wait
@@ -142,6 +145,8 @@ class Workbench:
             if not path.is_dir() or path.is_symlink() or not (path / 'run.json').exists():
                 continue
             try:
+                if p.read(path / 'plan.json')['config'].get('profile', 'formal') != 'formal':
+                    continue
                 rows.append(self.status(path.name))
             except (APIError, OSError, ValueError, KeyError) as exc:
                 errors.append({'run_id': path.name, 'error': str(exc)})

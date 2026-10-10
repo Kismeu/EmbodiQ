@@ -17,8 +17,6 @@
 
 后续复核：原进程因注释导致的源码字节变化停止，仅完成 OpenVLA Spatial 441/500、VLA-Adapter Spatial 490/500。已核对 AST 等价并启动带输入复核的续跑，最新状态在 `results/baseline_unified_v3_20260919/recovery/status.json`。详情见 `baseline_review_and_quant_next.md`，下文启动状态保留为历史记录。
 
-历史修订：unified.v2 的 smoke 阶段发现 FastWAM 原生 seed 不接受 0（另外两模型均 2/2 成功）。v2 已自动停止，未启动全量；失败日志保留。当前为 **unified.v3、三模型共同 seed=42**，新增原生 seed 接受性检查，30 项回归通过。
-
 ## 运行范围
 
 本轮仅建立原精度基线：OpenVLA、VLA-Adapter Pro、FastWAM uncond first-frame，各四个 LIBERO 集合、每集合 10 任务、每任务 50 回合，共 6000 回合、12 个集合结果单元。RTN/AWQ/HSA 尚不在本轮队列。不得将这 12 个原精度单元解释为最终 48 单元矩阵已完成。
@@ -67,7 +65,6 @@ GPU 分配：OpenVLA 使用物理 GPU 2；VLA-Adapter/FastWAM 在物理 GPU 3 �
 - `environment_manifest.json`：三个环境包版本、代码 SHA256 与 GPU 分配。
 - `episode_manifest.json`：40 个任务及 2000 个共享 episode 配置（在三模型上复用，共 6000 回合）。
 - `input_manifest.json`：权重与辅助输入的内容哈希；只有 complete=true 表示哈希阶段完成。
-- `smoke/<model>/<suite>/*_results.json`：小规模回归结果。
 - `full/<model>/<suite>/*_results.json`：全量基线结果。
 
 v3 控制器 PID 3542332，环境/初始状态清单已导出。三个模型小规模检查均已完成：各 2/2 成功，合计 6/6、零错误；三个结果的 seed=42、MuJoCo=3.3.2 及逐回合初始状态哈希与清单一致。当前进入 hashing_inputs，完整权重哈希后自动进入全量。尚未宣布 6000 回合完成，以 status.json 与实际结果为准。旧 v2 控制器 PID 3526708 已失败结束。

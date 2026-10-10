@@ -9,7 +9,7 @@
 ```bash
 python -m pip install -e '.[ctl]'
 embodiq capabilities
-embodiq launch configs/stage_fp16_rtn.json --profile smoke --dry-run
+embodiq launch configs/stage_fp16_rtn.json --profile formal --dry-run
 embodiq web --port 8765
 ```
 
@@ -58,11 +58,11 @@ OpenVLA/VLA-Adapter 分集合选择兼容 checkpoint；FastWAM 还需要归一�
 
 若输入缺失，任务会明确进入阻塞状态；不能靠创建空 JSON 或替换为演示数据绕过预检。静态 `demo/` 的快照不属于可执行实验输入。
 
-## 4. 从快速检查到正式运行
+## 4. 提交、查看与恢复正式评测
 
 ```bash
 embodiq launch configs/my.local.json --models vla_adapter --methods fp16 rtn \
-  --suites libero_spatial --profile smoke --gpu 0
+  --suites libero_spatial --profile formal --gpu 0
 embodiq status results/platform/<运行编号>
 embodiq resume-run results/platform/<运行编号> --gpu 0
 ```
@@ -79,4 +79,4 @@ python -m http.server 8000 --bind 127.0.0.1
 
 打开 `http://127.0.0.1:8000/demo/`。该模式不调用后端，不需要显卡，不允许创建/停止/恢复任务。结果来自真实完成运行的快照，去除了机器路径、文件哈希和原始日志。
 
-可用 `tools/build_showcase.py <已完成运行目录> ...` 重新导出演示快照；导出前会验证保存的结果文件。`tools/record_showcase.cjs` 使用额外的 Playwright 开发工具录制字幕演示，不是运行平台的必需依赖。
+可用 `tools/build_showcase.py <已完成正式运行目录> ...` 重新导出演示快照；导出前会验证保存的结果文件。当前随仓库发布的演示来自 `tools/report_matrix.py` 重新准入的正式历史矩阵，通过 `tools/build_showcase.py --matrix <矩阵文件>` 导出；历史汇总不伪造托管阶段进度。`tools/record_showcase.cjs` 使用额外的 Playwright 开发工具录制字幕演示，不是运行平台的必需依赖。

@@ -28,7 +28,7 @@ def main():
  ap.add_argument('--out',type=Path,required=True)
  ap.add_argument('--gpu',type=int,default=0)
  ap.add_argument('--scopes',default='llm,vision_dino,vision_siglip,projector,action_head', help='comma-separated quantization scopes')
- ap.add_argument('--limit',type=int,default=0,help='development smoke limit; output is marked non-formal')
+ ap.add_argument('--limit',type=int,default=0,help='development sample limit; output is marked non-formal')
  args=ap.parse_args()
  if args.out.exists(): raise SystemExit(f'output exists: {args.out}')
  os.environ.update(CUDA_VISIBLE_DEVICES=str(args.gpu),MUJOCO_GL='egl',PYOPENGL_PLATFORM='egl',HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',QVLA_TF_CPU_ONLY='1')

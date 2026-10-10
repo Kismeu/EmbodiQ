@@ -19,11 +19,6 @@ OpenVLA Goal/Long 每套四分片齐全，safetensors 可读取，共 982 个 te
 
 ## 闭环运行
 
-- OpenVLA Object：统一入口 evaluate，GPU 0，task 0/1 各 2 回合，official.openvla 协议。输出 `results/stage3_openvla_object_smoke`。已完成，退出码 0：task 0 为 2/2，task 1 为 1/2（另一个为 timeout），总计 3/4 成功，error_episodes 均为空。两个任务结果的 policy.family 均为 openvla。与固定观测一致性测试共同支持“新适配器的小规模功能验证通过”，不能作为完整 Object 集合成功率。
-- FastWAM：原生入口 eval_libero_single，GPU 2，uncond checkpoint、libero_spatial task 0、1 回合、sigma_shift=5.0、compile_action_infer=false。输出 `results/stage3_fastwam_native_smoke`。已完成，退出码 0，1/1 成功，原生日志记录任务耗时 23.18 秒，保存了成功视频。关闭编译用于先验证功能，任务耗时包含环境等开销，不是查询延迟，不能作为官方加速配置的延迟结果。
-
-FastWAM 首次尝试因缺 GitPython 在模型加载前失败。本次通过清华 PyPI 镜像，清除大小写 HTTP/HTTPS/ALL_PROXY，并使用 pip --isolated --proxy '' 安装仓库指定 GitPython==3.1.45（含 gitdb/smmap）；未更改 PyTorch/MuJoCo。补齐依赖后重跑。旧环境版本偏差仍存在，单次冒烟即使成功也不代表环境完全复现。
-
 GPU 0 有约 0.73 GiB 的其他进程驻留，统一入口已标记 contended=true。本轮为功能验证，其资源数字不进入最终比较主表。
 
 ## 本轮完成与剩余工作

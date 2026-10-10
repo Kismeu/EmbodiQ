@@ -6,7 +6,7 @@
 
 ```bash
 embodiq validate-config configs/stage_fp16_rtn.json
-embodiq launch configs/stage_fp16_rtn.json --profile smoke --dry-run
+embodiq launch configs/stage_fp16_rtn.json --profile formal --dry-run
 embodiq web --config configs/stage_fp16_rtn.json
 ```
 

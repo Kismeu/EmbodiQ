@@ -1,6 +1,6 @@
 <h1 align="center">EmbodiQ</h1>
 <p align="center"><strong>具身模型量化与任务评测工作台</strong></p>
-<p align="center">选择模型与量化方法，统一评测机器人任务成功率、查询耗时和显存占用。</p>
+<p align="center">在统一任务协议下，对比具身模型量化前后的任务成功率、查询耗时与显存占用。</p>
 
 <div align="center">
 <img alt="版本 0.1.0" src="https://img.shields.io/badge/version-0.1.0-334155?style=flat-square">
@@ -10,7 +10,7 @@
 </div>
 
 <p align="center">
-<a href="#演示">观看演示</a> · <a href="#支持范围">支持范围</a> · <a href="#开始使用">开始使用</a> · <a href="docs/getting_started.md">安装配置</a> · <a href="docs/web_workbench.md">工作台与 API</a>
+<a href="#演示">观看演示</a> · <a href="#支持范围">支持范围</a> · <a href="#开始使用">开始使用</a> · <a href="#模型与仿真资源">模型与仿真资源</a> · <a href="docs/getting_started.md">安装配置</a> · <a href="docs/web_workbench.md">工作台与 API</a>
 </p>
 
 ## 演示
@@ -25,7 +25,7 @@
 | :--- | :--- | :--- |
 | 选择模型、量化方法与任务集合，预览评测规模 | 查看执行进度与日志，停止任务或断点续跑 | 对照成功率、查询耗时与显存占用，导出报告 |
 
-> 演示使用已完成且通过结果校验的**快速检查记录**，用于展示操作流程，不代表正式任务成功率。只读演示不会启动模型或占用显卡。
+> 演示展示 **3 个模型 × 2 种方法 × 4 个任务集合，共 12,000 回合**的正式实验历史结果。只读演示不启动模型；历史资源采样口径及限制在报告备注中列出。
 
 <details>
 <summary>查看界面截图</summary>
@@ -48,9 +48,9 @@
 
 | 模型 | 原始精度 | RTN 四位量化 | AWQ | HSA |
 | :--- | :---: | :---: | :---: | :---: |
-| OpenVLA | 已支持 | 已支持 | 待接入 | 待接入 |
-| VLA-Adapter | 已支持 | 已支持 | 待接入 | 待接入 |
-| FastWAM | 已支持 | 已支持 | 待接入 | 待接入 |
+| [OpenVLA](https://github.com/openvla/openvla) | 已支持 | 已支持 | 待接入 | 待接入 |
+| [VLA-Adapter](https://github.com/OpenHelix-Team/VLA-Adapter) | 已支持 | 已支持 | 待接入 | 待接入 |
+| [FastWAM](https://github.com/yuantianyuan01/FastWAM) | 已支持 | 已支持 | 待接入 | 待接入 |
 
 原始精度实际使用 **BF16**，配置名称沿用 `fp16`；RTN 使用 **4 位权重、每组 128 个权重**。FastWAM 的自动对比固定使用首帧模式（`first-frame`）。AWQ、HSA 的预留接口不表示已完成适配或验证，平台不会为它们生成占位分数。
 
@@ -63,6 +63,19 @@
 | 结果指标 | 任务成功率、集合平均成功率、查询耗时、运行与加载峰值显存 |
 | 结果导出 | JSON、Markdown、CSV、对比图 |
 | 复现检查 | 记录并校验模型、代码、环境、输入及已完成结果 |
+
+## 模型与仿真资源
+
+模型名称链接到各自的官方仓库；请按上游说明获取源码和兼容权重，再按本项目的[安装与配置](docs/getting_started.md)设置路径。
+
+| 资源 | 准备内容 |
+| :--- | :--- |
+| OpenVLA / VLA-Adapter | 模型源码、对应 LIBERO 任务集合的权重、独立 Python 运行环境 |
+| FastWAM | 模型源码、首帧动作预测权重、归一化统计文件、独立 Python 运行环境 |
+| [LIBERO 仿真评测环境](https://github.com/Lifelong-Robot-Learning/LIBERO) | 仿真资产、任务定义、初始状态及无头渲染依赖 |
+| 固定评测输入 | 回合清单与资源测量观测，准备方式见[评测输入说明](docs/getting_started.md#3-固定评测输入) |
+
+源码仓库不包含上述权重和数据；仅安装控制端即可浏览工作台，执行评测前需完成资源准备。
 
 ## 开始使用
 
@@ -89,17 +102,28 @@ embodiq web --config configs/stage_fp16_rtn.json --runs-root results/platform --
 
 打开 **http://127.0.0.1:8765**。页面可先浏览和预览配置；执行真实模型前，需要按[安装与配置](docs/getting_started.md)准备各模型独立环境、兼容权重、LIBERO 和固定评测输入。
 
-### 运行一次快速检查
+### 提交正式评测
 
 环境就绪后，可以在网页创建任务，也可以使用命令行：
 
 ```bash
 embodiq launch configs/stage_fp16_rtn.json \
   --models vla_adapter --methods fp16 rtn \
-  --suites libero_spatial --profile smoke --gpu 0
+  --suites libero_spatial --profile formal --gpu 0
 ```
 
-`smoke` 表示快速检查，每个模型／方法／任务集合运行 1 回合。使用 `--profile formal` 切换正式评测；完整的 **3 个模型 × 2 种方法 × 4 个集合**共计 **31 个阶段、12,000 回合**。更多用法见[命令行流程](docs/automatic_evaluation.md)。
+上面的命令运行 VLA-Adapter 的原始精度与 RTN，覆盖空间关系集合，共 **1,000 回合**。每个集合固定为 10 项任务，每项重复 50 回合。
+
+完整评测使用以下命令：
+
+```bash
+embodiq launch configs/stage_fp16_rtn.json \
+  --models openvla vla_adapter fastwam --methods fp16 rtn \
+  --suites libero_spatial libero_object libero_goal libero_10 \
+  --profile formal --gpu 0
+```
+
+**3 个模型 × 2 种方法 × 4 个集合**共计 **31 个阶段、12,000 回合**。可在命令末尾添加 `--dry-run` 查看计划与配置，不启动评测。更多用法见[命令行流程](docs/automatic_evaluation.md)。
 
 ## 如何理解评测结果
 
@@ -141,14 +165,12 @@ embodiq launch configs/stage_fp16_rtn.json \
 CUDA_VISIBLE_DEVICES='' PYTHONPATH=src python -m pytest -q tests/
 ```
 
-发布前的本机完整回归为 227 通过、23 跳过；中文界面调整后的 Web/API 专项为 19 通过。仓库另设 CPU 协议检查工作流，覆盖配置、任务协议和报告准入。跳过项与 CPU 检查均不能替代模型的 GPU 路径验证。
+本次完整回归为 **230 通过、23 跳过**（GPU 模型路径按依赖和运行条件跳过）。仓库另设 CPU 协议检查工作流，覆盖配置、任务协议和报告准入。跳过项与 CPU 检查均不能替代模型的 GPU 路径验证。
 
 </details>
 
 ## 授权与上游项目
 
 本仓库尚未选定整体开源许可证。第三方代码与模型分别遵循其原项目授权，详见[第三方说明](THIRD_PARTY.md)。
-
-模型与仿真环境：[OpenVLA](https://github.com/openvla/openvla) · [VLA-Adapter](https://github.com/OpenHelix-Team/VLA-Adapter) · [FastWAM](https://github.com/yuantianyuan01/FastWAM) · [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO)。
 
 界面信息组织参考：[RLark](https://github.com/RLinf/RLark) · [Genie Sim / RoboColiseum](https://github.com/AgibotTech/genie_sim)。

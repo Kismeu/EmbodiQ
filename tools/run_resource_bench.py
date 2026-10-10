@@ -339,7 +339,6 @@ def main() -> int:
     ap.add_argument("--allow-contention", action="store_true",
                     help="measure anyway and mark the result contended")
     ap.add_argument("--job-plan", type=Path, help="immutable managed plan with explicit per-suite model paths")
-    ap.add_argument("--smoke", action="store_true", help="development only: one input, two warmups, one measured query per suite")
     args = ap.parse_args()
 
     if args.make_inputs:
@@ -403,17 +402,14 @@ def main() -> int:
         "warmup_queries": WARMUP_QUERIES,
         "measured_passes": MEASURED_PASSES,
         "nvml_sampler_hz": NVML_SAMPLER_HZ,
-        "validation_only": args.smoke,
+        "validation_only": False,
         "plan_sha256": hashlib.sha256(args.job_plan.read_bytes()).hexdigest() if args.job_plan else None,
         "contended_before": before,
         "suites": {},
     }
     by_suite = {s: [t for t in inputs["tasks"] if t["suite"] == s] for s in suites}
-    warmup, passes = (2, 1) if args.smoke else (WARMUP_QUERIES, MEASURED_PASSES)
+    warmup, passes = WARMUP_QUERIES, MEASURED_PASSES
     doc.update(warmup_queries=warmup, measured_passes=passes)
-    if args.smoke:
-        by_suite = {s: [{**rows[0], 'observations': rows[0]['observations'][:1]}]
-                    for s, rows in by_suite.items()}
     try:
         for suite in suites:
             print(f"[{args.model}/{args.quant}] {suite}: "

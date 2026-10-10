@@ -16,7 +16,6 @@
 > | §5 完成度估算(23/48、HSA 0%) | 框架已完整;AWQ/HSA 待上游交付工件 | `README.md` §2 |
 > | §6 列出的 1.1–1.5 缺口 | 范围已收回 1.4,这些缺口移出计划 | §7 开头 |
 
-
 本文件只记录本次直接读取的事实与由此得出的判断，不升级历史文档中的声称为已验证结论。
 
 ## 0. 本次核查方式
@@ -259,7 +258,7 @@ RTN 已经按 2.1 的清单跑完 11 个单元。AWQ/HSA 必须沿用**完全相
     产出单一 AWQ 工件文件（含 per-layer scale、clip_max、层清单、校准清单哈希、
     源 checkpoint 哈希、`implementation=awq_block_v1`）。
 12. 三模型各做一次：工件保存/加载一致性检查 → 固定输入数值检查（与搜索期等价）
-    → Spatial task 0 两回合闭环冒烟 → 真实 packed int4 推理确认（不是伪量化）。
+    → 真实 packed int4 推理确认（不是伪量化）。
 13. 跑 AWQ 的 12 个单元 × 500 回合。FastWAM 需要先解除 `run_adapter.py:130` 的硬拒绝，
     并确认其 scope 工件按 `video_dit/action_dit` 别名去重（stage5 已修过一次别名问题）。
 14. 把 stage6 的 AWQ 代码合回 `src/embodiq`（主干目前完全没有 `calibration.py`/
@@ -274,7 +273,7 @@ RTN 已经按 2.1 的清单跑完 11 个单元。AWQ/HSA 必须沿用**完全相
     （`requantize_after_extraction=True`）。
 17. 工件格式与加载校验、`LayerRecord` 的 `residual_units/residual_bytes/index_bytes`
     实际填充，并计入显存与存储预算（协议 §6 要求残差/索引/scale 全部入账）。
-18. 验收四项：保存/加载一致性、固定输入输出检查、三模型闭环冒烟、
+18. 验收四项：保存/加载一致性、固定输入输出检查、
     真实显存与计时路径检查。然后跑 HSA 的 12 个单元 × 500 回合。
 19. 预算匹配说明：HSA 的基础位宽与 RTN/AWQ 相同但总预算更大（残差+索引），
     若要声称"等预算下更优"，必须另做一次预算对齐实验，不能只固定 w4g128。

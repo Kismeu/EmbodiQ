@@ -24,7 +24,7 @@ def app(tmp_path):
 
 
 def body(**kwargs):
-    return dict(models=['openvla'], methods=['fp16'], suites=['libero_spatial'], profile='smoke',
+    return dict(models=['openvla'], methods=['fp16'], suites=['libero_spatial'], profile='formal',
                 gpu=0, wait_seconds=0, **kwargs)
 
 
@@ -100,7 +100,7 @@ def test_http_capabilities_assets_preview_and_empty_list(http, app):
         assert status == 200 and content
     assert http('/api/runs')[1]['runs'] == []
     status, plan = http('/api/preview', body())
-    assert status == 200 and plan['episodes'] == 1 and plan['total_stages'] == 3
+    assert status == 200 and plan['episodes'] == 500 and plan['total_stages'] == 3
     formal = body(); formal.update(models=['openvla'], methods=['fp16', 'rtn'], profile='formal',
                                   suites=['libero_spatial','libero_object','libero_goal','libero_10'])
     assert http('/api/preview', formal)[1]['episodes'] == 4000
@@ -116,7 +116,7 @@ def test_reject_cross_origin_mutations(http, app, headers):
 
 
 @pytest.mark.parametrize('updates', [
-    {'methods':['awq']}, {'methods':['hsa']}, {'models':[]}, {'suites':['unknown']},
+    {'profile':'legacy'}, {'profile':None}, {'methods':['awq']}, {'methods':['hsa']}, {'models':[]}, {'suites':['unknown']},
     {'models':['openvla','openvla']}, {'gpu':-1}, {'gpu':True}, {'gpu':1.5},
     {'wait_seconds':float('nan')}, {'config':'/tmp/arbitrary.json'}, {'models':[{}]},
 ])
@@ -160,8 +160,8 @@ def test_real_child_stop_restart_resume_report_and_tamper(http, app, cpu_worker)
     assert state['phase'] == 'complete', state
     assert state['completed'] == state['total'] == 3
     status, report = http(f'/api/runs/{run_id}/report')
-    assert status == 200 and report['complete'] and not report['formal']
-    assert report['n_episodes'] == 1
+    assert status == 200 and report['complete'] and report['formal']
+    assert report['n_episodes'] == 500
     for name in ('report.md','cells.csv','tradeoffs.png','tradeoffs.svg'):
         assert http(f'/api/runs/{run_id}/report/{name}')[0] == 200
     assert 'report' in http(f'/api/runs/{run_id}/logs')[1]['text']
@@ -184,3 +184,22 @@ def test_cli_web_dispatch(monkeypatch):
     monkeypatch.setattr(server, 'serve', lambda *args: calls.append(args))
     assert main(['web','--config','cfg.json','--runs-root','runs','--port','9001']) == 0
     assert calls == [('cfg.json','runs',9001)]
+
+
+def test_default_profile_is_formal_and_old_records_are_hidden(http, app):
+    request = body()
+    request.pop('profile')
+    status, preview = http('/api/preview', request)
+    assert status == 200 and preview['profile'] == 'formal' and preview['episodes'] == 500
+    assert http('/api/capabilities')[1]['profiles'] == ['formal']
+    root, state = p.create_pipeline(p.prepare_config(app.config), app.root)
+    plan = p.read(root / 'plan.json')
+    plan['config']['profile'] = 'legacy'
+    plan['config']['trials_per_task'] = 1
+    p._atomic(root / 'plan.json', plan)
+    state['plan_sha256'] = p.digest(root / 'plan.json')
+    p._atomic(root / 'run.json', state)
+    assert http('/api/runs')[1] == {'runs': [], 'errors': []}
+    assert http(f'/api/runs/{root.name}')[0] == 404
+    assert http(f'/api/runs/{root.name}/report')[0] == 404
+    assert (root / 'run.json').exists()

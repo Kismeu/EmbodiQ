@@ -24,13 +24,12 @@
 <fieldset><legend>选择模型</legend><div id="models" class="choices model-choices"></div></fieldset>
 <fieldset><legend>量化方法</legend><div id="methods" class="choices"></div><p class="hint">原始精度作为对照；四位量化用于比较压缩后的任务表现与资源占用。</p></fieldset>
 <fieldset><legend>任务集合 <span class="muted">LIBERO</span></legend><div id="suites" class="choices suite-choices"></div></fieldset>
-<label for="profile">评测规模</label><select id="profile"><option value="smoke">快速检查 · 每个集合运行 1 回合</option><option value="formal">正式评测 · 每个集合运行 500 回合</option></select>
-<p class="hint">回合数按每个“模型 × 方法”组合计算。快速检查用于确认流程可运行。</p>
+<p class="hint">每个任务集合包含 10 项任务，每项运行 50 回合；每个“模型 × 方法 × 任务集合”组合共 500 回合。</p>
 <div class="form-divider"></div><h3>运行设备</h3>
 <div class="grid-two"><div><label for="gpu">显卡编号</label><input id="gpu" type="number" min="0" max="255" value="0" required><p class="hint">填写服务器上的显卡编号，从 0 开始。</p></div><div><label for="wait">显卡忙碌时最多等待</label><div class="input-unit"><input id="wait" type="number" min="0" max="86400" value="0" required><span>秒</span></div><p class="hint">设为 0 时，显卡忙碌就暂停任务。</p></div></div>
 <details class="technical"><summary>精度与方法说明</summary><p>原始精度采用 BF16，即 16 位浮点数。四位量化采用 RTN（就近舍入），每 128 个权重一组。AWQ 与 HSA 暂未接入，当前不可选。</p></details>
 </div>
-<aside class="panel submit-panel"><h2>本次评测</h2><dl id="selection-summary"></dl><div class="estimate" id="estimate" aria-live="polite">正在读取配置…</div><p id="profile-note" class="hint">快速检查的结果仅用于验证流程。</p><button class="primary" id="submit" type="submit" disabled>开始评测</button><p class="hint after-submit">提交后可在“任务管理”查看进度。</p></aside>
+<aside class="panel submit-panel"><h2>本次评测</h2><dl id="selection-summary"></dl><div class="estimate" id="estimate" aria-live="polite">正在读取配置…</div><p id="profile-note" class="hint">按统一任务协议执行正式评测。</p><button class="primary" id="submit" type="submit" disabled>开始评测</button><p class="hint after-submit">提交后可在“任务管理”查看进度。</p></aside>
 </form>
 </section>
 <section id="view-tasks" class="view" aria-label="任务管理">

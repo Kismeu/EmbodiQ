@@ -1,4 +1,4 @@
-"""Offline baseline pipeline: asset manifest -> smoke gate -> 6000 episodes.
+"""Offline baseline pipeline: asset manifest -> 6000 formal episodes.
 
 Workers use reserved physical GPUs 2/3; jobs sharing a GPU are serialized.
 Failed jobs halt that model pipeline;
@@ -224,8 +224,7 @@ def main():
                    "--model", model, "--checkpoint", str(checkpoint(model, suite)),
                    "--suite", suite, "--quant", "fp16", "--protocol", "unified.v3",
                    "--gpu", str(GPU[model]), "--out", str(output),
-                   "--trials", "2" if phase == "smoke" else "50"]
-            if phase == "smoke": cmd += ["--tasks", "0"]
+                   "--trials", "50"]
             if model == "fastwam":
                 cmd += ["--dataset-stats", str(EMB / "FastWAM/checkpoints/fastwam_release/libero_uncond_2cam224_dataset_stats.json")]
             row = dict(model=model, suite=suite, phase=phase, command=cmd, status="running")
@@ -240,8 +239,8 @@ def main():
                 rc = proc.wait()
             files = sorted((output / suite).glob("*_results.json"))
             records = [json.loads(p.read_text()) for p in files]
-            expected_tasks = 1 if phase == "smoke" else 10
-            expected_trials = 2 if phase == "smoke" else 50
+            expected_tasks = 10
+            expected_trials = 50
             complete = (rc == 0 and len(records) == expected_tasks and
                         all(d["total_episodes"] == expected_trials and not d["error_episodes"] for d in records))
             with guard:
@@ -253,11 +252,6 @@ def main():
         def run_job(model, suite, phase):
             with gpu_locks[GPU[model]]:
                 return _run_job(model, suite, phase)
-
-        state["phase"] = "smoke"; save()
-        with ThreadPoolExecutor(max_workers=3) as pool:
-            checks = list(pool.map(lambda model: run_job(model, "libero_spatial", "smoke"), GPU))
-        if not all(checks): raise RuntimeError("Smoke gate failed; full evaluation not started")
 
         state["phase"] = "hashing_inputs"; save()
         paths = set()

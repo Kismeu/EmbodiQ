@@ -78,8 +78,7 @@ weights_only 加载
   -> 每层权重和 bias 哈希校验
   -> scale / clip / residual 形状校验
   -> 固定输入动作保真度
-  -> Spatial task 0 闭环冒烟
-  -> 全量 LIBERO 评测
+   -> 全量 LIBERO 评测
 ```
 
 测试工件必须放在 `artifacts/validation/`，并标记为

@@ -73,8 +73,6 @@
 - 产物：`artifacts/awq_scale_pilot_v1/report.json`、`input_scales.pt`、`activation_samples.pt`，均绑定观测清单和模型权重摘要。
 - 报告明确标记 `search_pilot_not_deployed_awq`、`block_objective=false`、`clipping=false`。
 
-下一步：校验全部训练观测 → 完成可比较的 AWQ block/裁剪适配与产物加载校验 → 真实 packed 推理数值检查 → 三模型闭环冒烟 → 配对正式评测。HSA 尚未实现选择/残差工件完整链路，后续仍保留独立可替换实现接口。
-
 ## AWQ 适配尝试记录（2026-10-09）
 
 已使用完整训练校准观测对 VLA-Adapter 做两次隔离尝试：

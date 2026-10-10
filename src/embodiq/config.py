@@ -67,12 +67,10 @@ def validate_config(config: dict[str, Any]) -> list[str]:
     if set(suites) - SUITES or not suites:
         errors.append(f"benchmark.suites must be drawn from {sorted(SUITES)}")
     profile = config.get("profile", "formal")
-    if profile not in {"formal", "smoke"}:
-        errors.append("profile must be formal or smoke")
+    if profile != "formal":
+        errors.append("only formal evaluation is supported")
     if profile == "formal" and config.get("trials_per_task") != 50:
         errors.append("trials_per_task must be 50 for the formal matrix")
-    if profile == "smoke" and config.get("trials_per_task") != 1:
-        errors.append("smoke profile requires trials_per_task=1")
     if config.get("seed") != 42:
         errors.append("seed must be 42 for the frozen episode manifest")
     if config.get("benchmark", {}).get("name") != "libero":
@@ -161,7 +159,7 @@ def build_plan(config: dict[str, Any]) -> list[dict[str, Any]]:
                     "artifact": q.get("artifact"),
                     "hsa_rho": q.get("rho", 0.01) if method == "hsa" else None,
                     "fastwam_mode": config["runtime"].get("fastwam_mode", "first_frame"),
-                    "task_ids": [0] if config.get("profile") == "smoke" else list(range(10)),
+                    "task_ids": list(range(10)),
                     "checkpoint_every": config.get("checkpoint_every", 1),
                     "save_videos": config.get("save_videos", False),
                 }

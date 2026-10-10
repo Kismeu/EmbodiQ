@@ -1,8 +1,8 @@
-# 一键式评测（本机 CLI 第一版）
+# 一键式正式评测
 
 当前开放 OpenVLA、VLA-Adapter、FastWAM，以及原精度基线和 RTN。
 一次提交自动执行预检、闭环评测、资源专测、报告；AWQ/HSA 返回待接入错误，不会启动或回退。
-这是本机顺序执行器，尚无 Web 界面或跨机器调度。
+网页与命令行复用本机顺序执行器；网页入口见[Web/API 工作台](web_workbench.md)。
 
 ## 一条命令开始
 
@@ -24,23 +24,17 @@ RTN 在模型加载阶段执行，沿用已验证的量化范围和 W4/group128 
 
 ```bash
 # 查看可用能力
-PYTHONPATH=src python -m embodiq.ctl.cli capabilities
+embodiq capabilities
 
-# 只检查配置和显示展开计划，不创建运行、不占 GPU
-PYTHONPATH=src python -m embodiq.ctl.cli launch configs/stage_fp16_rtn.json --dry-run
+# 只展开正式计划，不创建运行、不占用 GPU
+embodiq launch configs/stage_fp16_rtn.json --dry-run
 
-# 选择一个模型、两方法、一个任务集合
-PYTHONPATH=src python -m embodiq.ctl.cli launch configs/stage_fp16_rtn.json \
-  --models vla_adapter --methods fp16 rtn --suites libero_spatial --gpu 3
-
-# 小规模真实流程验证：每个所选集合仅 task 0、1 回合；资源每集合 1 条输入、2 次预热、1 次测量
-PYTHONPATH=src python -m embodiq.ctl.cli launch configs/stage_fp16_rtn.json \
-  --suites libero_spatial --profile smoke --gpu 3
+# 一个模型、两方法、一个集合，共 1,000 回合
+embodiq launch configs/stage_fp16_rtn.json \
+  --models vla_adapter --methods fp16 rtn --suites libero_spatial --gpu 0
 ```
 
-`smoke` 明确标为开发验证，不进入正式矩阵。它保留任务原有动作步上限，不用缩短任务伪造成功率。
-只有正式档位四个集合全部完整时才给出四集合宏平均；子集报告称为“所选集合平均”。
-若只选择 RTN，则原精度差值留白，不自动混入历史基线。
+四个集合全部完成时才给出四集合平均成功率；子集报告为“所选集合平均”。若只选择 RTN，则相对原始精度的差值留白，不自动混入历史基线。
 
 ## 状态、停止与恢复
 
@@ -107,41 +101,18 @@ report/tradeoffs.png         性能与资源对比图（另有 SVG）
 显存分别保留加载期与稳态，延迟包括查询和动作步摊销推理耗时；后者不等于真机端到端响应时间。
 当前资源输入来自成功演示的开发观测，不代表失败状态分布。
 
-本轮真实 smoke 验证发现：单次查询可能短于旧默认 100 ms 采样间隔，使重置后的 NVML 峰值为 0。
-准入检查会拒绝这种结果。现已在采样重置和报告边界补充同步读取，并让资源专测实际使用 100 Hz
-稳态采样；加载期频率单独记录。NVML 不可用时仍保留缺失值并拒绝准入，不用 allocator 数值替代。
+当前资源专测实际使用 100 Hz 采样，并在测量边界同步读取显存；NVML 不可用或峰值无效时拒绝报告准入。
 
 历史资源文件的 `nvml_sampler_hz=100` 是当时脚本声明的目标，而旧 `MemoryProbe` 实际默认 10 Hz；
 这批历史峰值没有因本次修复而重新测量。正式历史矩阵保持原数据，新运行的资源结果独立保存。
 工作进程同时固定模型 CUDA 与仿真 EGL 的物理 GPU，沿用本地离线权重/缓存，避免加载时访问模型源。
 
-## 范围
+## 范围与验证
 
-`launch/resume-run` 是自动流程；旧 `run/execute/resume` 仍保留为原有单任务管理入口，
-不能用旧 `execute` 操作新自动运行。第一版不提供任意新模型自动适配、AWQ/HSA 算法、
-多 GPU 并行、RLark/RoboColiseum 接入或 Web 服务。
-后续界面可以直接复用本次计划、状态和报告契约。
+`launch/resume-run` 为完整自动流程；`run/execute/resume` 保留为单任务管理入口，不能交叉操作两种运行目录。平台提供本地网页和 API，不包含任意模型自动适配、AWQ/HSA 正式算法、多 GPU 并行或跨机器调度。
 
-## 2026-10-09 实测验收
+当前所有新评测固定使用正式协议：每集合 10 项任务、每任务 50 回合。配置、命令行和网页都拒绝其他评测档位。旧记录及原始实验文件保留在本地，不会被改写为正式结果。
 
-三模型 × 原精度/RTN，选择 Spatial 的 smoke 档位，通过一次 `launch` 完成
-6 个真实闭环回合、6 个资源阶段及报告，共 13 个阶段。六回合均成功，
-但每条件只有一个回合，不用于估计正式成功率或宣称模型性能改善。
-六组专测均无争用、NVML 非零；每组只测一次查询，不能作为稳定延迟统计。
+自动化测试覆盖计划规模、任务执行、正式结果准入、停止与恢复、输入及产物篡改拒绝。测试中的 CPU 模型替身不产生实际模型性能数据。
 
-完成后实际调用 `resume-run`，重新核对输入和产物，13 个阶段的尝试次数全部保持 1，
-证明没有重复运行已完成阶段。单元/集成测试另覆盖运行中停止、工作进程组清理、失败重试、
-GPU 忙阻塞、继承锁防重复运行、篡改输入/产物拒绝，以及资源加载自定义权重路径。
-
-- 主测试集：208 passed、23 skipped；FastWAM 环境定向检查：19 passed。存在重叠，不相加。
-- 四集合正式配置：24 闭环 + 6 资源 + 1 报告的计划与路径预检通过，未重复执行 12,000 回合。
-- 新报告：[`report.md`](../results/pipeline_validation_20261009/20261009_220944_ab8a066ab2/report/report.md)。
-- 验收记录与日志：[`acceptance.json`](../results/framework_closeout_20261009/pipeline_v1/acceptance.json)。
-- 版本固化目录：`releases/task14_pipeline_v1_20261009/`，源码与证据快照附逐文件和压缩包 SHA256。
-
-首轮真实流程在 VLA-Adapter 原精度资源阶段被零 NVML 峰值门禁拒绝，该失败记录也保留。
-修复测量后创建新运行，没有修改旧输入身份或强行复用旧阶段。
-
-## 本地网页入口
-
-在同一执行层之上已增加 `embodiq web`，支持任务选择、提交、状态/日志、停止/续跑及结果下载。参见[Web/API 工作台](web_workbench.md)。
+已有正式历史数据覆盖 24 个原始精度/RTN 组合，共 12,000 回合。当前只读交互演示由这些数据汇总生成；更新网页和文档不会重新执行这批实验。

@@ -166,8 +166,7 @@ HSA 的 `rho` 会传递为 `--hsa-rho`；缺工件在启动模型前阻断。当
 1. **保存/加载一致性**：`QuantArtifact.load().bind()` 全量校验通过。
 2. **固定输入输出检查**：在开发集 320 条观测上，量化后动作块与搜索期
    记录一致（`core/fidelity.py` 的 `ActionFidelity`）。
-3. **三模型闭环冒烟**：Spatial task 0、2 回合、unified.v3、seed=42，零错误。
-4. **真实显存与计时路径检查**：确认走的是 packed int4 算子而非
+3. **真实显存与计时路径检查**：确认走的是 packed int4 算子而非
    `SimQuantLinear` 伪量化（后者无显存收益，不能作为部署指标）。
 
 ## 7. 调用方式

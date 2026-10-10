@@ -67,7 +67,6 @@ OpenVLA 旧 Spatial 日志截止任务 0 第 23 回合开始，只有 22 个已�
 1. `tests/test_contract_and_rollout.py` 与 `tests/test_rollout_error_surfacing.py`：11 passed，13.54 秒。为 CPU/mock 接口检查。
 2. `tests/test_parity_adapter.py`：3 passed，140.94 秒。使用实际 Spatial-Pro 权重与已有 fixture，在 GPU 0 上验证逐元素动作一致、动作块形状及夹爪约定。checkpoint 通过 EMBODIQ_ADAPTER_CKPT 指向真实路径；HF/Transformers 均离线。随后通过统一入口另跑 Spatial task 0 的 1 个回合，1/1 成功、error_episodes 为空，结果在 `results/stage2_audit/adapter/libero_spatial/gpu0_task0_results.json`；GPU 实际为 CUDA_VISIBLE_DEVICES=1，文件中的 gpu0 是逻辑编号，不是物理编号。新加的 --checkpoint-root 参数经此运行验证，并通过 py_compile 和 git diff --check。
 3. FastWAM：runtime 导入通过、uncond checkpoint 安全反序列化通过。缺少 VAE/文本组件，未触发会自动下载依赖的原生评测入口，闭环未完成。
-4. OpenVLA：Spatial 原生 BF16 冒烟验证完成，10 任务 × 1 回合，8/10 成功，进程退出码 0。日志 `results/stage2_audit/openvla/EVAL-libero_spatial-openvla-2026_09_17-21_29_39--stage2_smoke.txt`，视频位于 OpenVLA 的 `rollouts/2026_09_17`。仅能证明当前权重可加载并闭环执行；10 回合不足以形成正式成功率结论。进程退出清理时出现两条被忽略的 EGL_NOT_INITIALIZED 析构异常，发生在回合完成后；需在统一 runner 中检查环境关闭与 EGL 生命周期，不能报告为完全无异常。
 
 硬件：沙箱内 nvidia-smi 不可见；沙箱外读取正常，4 张 L40 均存在其他作业，空闲约 28–29 GiB。本次仅功能验证，所有新 GPU 测试的耗时均不作资源基准。未停止其他作业。
 
@@ -78,7 +77,6 @@ OpenVLA 旧 Spatial 日志截止任务 0 第 23 回合开始，只有 22 个已�
 | 目标与协议文档 | 已建立；方法范围明确，技术参数尚未全部冻结 |
 | 三模型源码 | 已存在，HEAD 见 experiment_protocol.md |
 | VLA-Adapter 原精度 | 历史全量记录已聚合核对；本次真实权重一致性及 1 回合闭环通过 |
-| OpenVLA 原精度 | 两集合权重可读；Spatial 新冒烟完成 8/10；Object 未跑，Goal/Long 缺权重，四集合基线未完成 |
 | FastWAM 原精度 | 任务权重已有；组件缺失，环境尚不一致，闭环待补 |
 | 统一模型适配 | VLA-Adapter 有实现；openvla/fastwam 后端仅空 __init__.py，不能算接入完成 |
 | RTN | VLA-Adapter 有历史闭环记录，其他模型未验证 |

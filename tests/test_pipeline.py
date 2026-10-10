@@ -22,7 +22,7 @@ def write(path, obj):
     path.write_text(json.dumps(obj))
 
 
-def config(tmp_path, profile='smoke'):
+def config(tmp_path, profile='formal'):
     cfg = p.prepare_config(p.ROOT / 'configs/stage_fp16_rtn.json', models=['openvla'],
                            suites=['libero_spatial'], profile=profile)
     checkpoint = tmp_path / 'checkpoint'
@@ -62,23 +62,22 @@ def fake_worker(cmd, env, log, **kwargs):
             write(Path(arg('--out')) / arg('--suite') / f'gpu0_task{task}_results.json', d)
         return 0
     plan = p.read(arg('--job-plan'))
-    smoke = '--smoke' in cmd
     suites = {}
     for job in plan['jobs']:
         if (job['model'], job['quant']) != (model, method):
             continue
         d = result_fixture(method=method)
-        suites[job['suite']] = {'checkpoint': job['checkpoint'], 'n_inputs': 1 if smoke else 50,
-                               'n_queries_measured': 1 if smoke else 150, 'passes': 1 if smoke else 3,
+        suites[job['suite']] = {'checkpoint': job['checkpoint'], 'n_inputs': 50,
+                               'n_queries_measured': 150, 'passes': 3,
                                'chunk_size': 1, 'replan_steps': 1,
                                'policy': d['policy'], 'quant': d['quant'],
                                'memory': {'weights_bytes': 5, 'peak_alloc_bytes': 10, 'nvml_peak_bytes': 20, 'load_peak_alloc_bytes': 30},
                                'latency': {'query_s': {'mean': .2}, 'per_env_step_s': .2}}
     write(Path(arg('--out')), {'schema': 'embodiq/resource_bench/1', 'phase': 'complete',
                                'model': model, 'quant': method, 'contended': False,
-                               'contended_before': [], 'contended_after': [], 'validation_only': smoke,
+                               'contended_before': [], 'contended_after': [], 'validation_only': False,
                                'plan_sha256': p.digest(arg('--job-plan')), 'inputs_manifest_sha256': 'inputs',
-                               'warmup_queries': 2 if smoke else 20, 'measured_passes': 1 if smoke else 3,
+                               'warmup_queries': 20, 'measured_passes': 3,
                                'suites': suites})
     return 0
 
@@ -91,16 +90,15 @@ def backend(monkeypatch):
     monkeypatch.setattr(p, 'run_child', fake_worker)
 
 
-@pytest.mark.parametrize('profile', ['smoke', 'formal'])
-def test_one_submit_runs_rollout_resource_report_and_resume_skips_completed(tmp_path, backend, monkeypatch, profile):
-    root, _ = p.create_pipeline(config(tmp_path, profile), tmp_path / 'runs')
+def test_one_submit_runs_rollout_resource_report_and_resume_skips_completed(tmp_path, backend, monkeypatch):
+    root, _ = p.create_pipeline(config(tmp_path), tmp_path / 'runs')
     assert p.execute_pipeline(root) == 0
     state = p.read(root / 'run.json')
     assert state['phase'] == 'complete'
     assert len(state['jobs']) == 5 and all(j['attempts'] == 1 for j in state['jobs'])
     doc = p.read(root / 'report/report.json')
-    assert doc['n_episodes'] == (2 if profile == 'smoke' else 1000)
-    assert doc['formal'] is (profile == 'formal')
+    assert doc['n_episodes'] == 1000
+    assert doc['formal'] is True
     assert all(a['four_suite_macro_success_rate'] is None for a in doc['aggregates'])
     monkeypatch.setattr(p, 'run_child', lambda *a, **k: pytest.fail('completed stage reran'))
     assert p.execute_pipeline(root, resume=True) == 0
@@ -222,7 +220,7 @@ def test_bad_resource_cannot_enter_report(tmp_path, backend, mutation):
     path = root / 'resource_bench/openvla_rtn.json'
     d = p.read(path)
     if mutation == 'checkpoint': d['suites']['libero_spatial']['checkpoint'] = '/wrong'
-    if mutation == 'profile': d['validation_only'] = False
+    if mutation == 'profile': d['validation_only'] = True
     if mutation == 'contention': d['contended'] = True
     if mutation == 'count': d['suites']['libero_spatial']['n_queries_measured'] = 0
     if mutation == 'plan': d['plan_sha256'] = 'wrong'
@@ -278,3 +276,15 @@ def test_resource_loader_uses_submitted_paths_not_historical_defaults(tmp_path, 
     if model == 'fastwam':
         assert str(captured['kwargs']['dataset_stats']) == job['dataset_stats']
         assert str(captured['kwargs']['repo_root']) == job['repo_root']
+
+
+def test_obsolete_run_cannot_resume_model_execution(tmp_path, backend, monkeypatch):
+    root, state = p.create_pipeline(config(tmp_path), tmp_path / 'runs')
+    plan = p.read(root / 'plan.json')
+    plan['config'].update(profile='legacy', trials_per_task=1)
+    write(root / 'plan.json', plan)
+    state['plan_sha256'] = p.digest(root / 'plan.json')
+    write(root / 'run.json', state)
+    monkeypatch.setattr(p, 'run_child', lambda *a, **k: pytest.fail('unsupported protocol started'))
+    with pytest.raises(ValueError, match='formal'):
+        p.execute_pipeline(root, resume=True)

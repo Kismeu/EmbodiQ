@@ -56,7 +56,6 @@ AWQ/HSA 按用户决定暂时留白；自动评测平台是下一阶段，见[�
 视频 latent 形状为 `[1, 48, 3, 14, 28]`，确认存在未来时间维。
 随后通过统一 rollout 跑 Spatial task 0，一个回合成功，70 个环境步、7 次模型查询。
 
-成功证据：[validation.json](../results/framework_closeout_20261009/idm_smoke_gpu3/validation.json)。
 GPU 0 首次尝试因其他进程占用导致 OOM，失败记录也保留；换空闲 GPU 3 后通过。
 这是接口实测，`formal=false`，不混入 first-frame 主矩阵，也不宣称完成 IDM 四集合评测。
 

@@ -4,8 +4,6 @@
 
 当前最新：FastWAM 已接入共用入口，GPU 动作一致性测试通过，统一入口 Spatial 两回合 2/2 成功、错误数 0；三个模型原精度接入验证均已有运行证据。见 `stage3_fastwam_adapter.md`。下文为各轮历史实施记录；完整量化主矩阵尚未执行。
 
-最新更新：所需下载均已完成（转换版仓库失败由官方原始组件替代）；OpenVLA GPU 一致性测试通过、统一入口 Object 冒烟 3/4 成功，FastWAM 原生闭环 1/1 成功。详见 `stage3_gpu_validation.md`。以下下载量和显存不足描述保留为前一轮实施快照，不代表当前状态。
-
 ## 当前交付
 
 - 新增 `embodiq.backends.openvla.policy.OpenVLAPolicy`，复用原生图像处理、提示词/动作解码和夹爪转换，返回统一 `(1, 7)` 动作块。
@@ -23,19 +21,7 @@
 
 ## GPU 可用后的下一条命令
 
-在 embodiq 目录、openvla 环境中，以一个 Object 回合验证共用入口：
-
-```bash
-env CUDA_VISIBLE_DEVICES=0 MUJOCO_GL=egl PYOPENGL_PLATFORM=egl \
-  PYTHONPATH=src HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
-  /data/jyc/tools/anaconda3/envs/openvla/bin/python \
-  -m embodiq.entry.evaluate --model openvla \
-  --checkpoint /data/jyc/models/openvla-7b-finetuned-libero-object \
-  --suite libero_object --quant fp16 --protocol official.openvla \
-  --tasks 0 --trials 1 --out results/stage3_openvla_object_smoke
-```
-
-通过后再做固定观测的原生/适配器输出一致性，扩展四集合冒烟；量化与最终主矩阵不由一次成功冒烟替代。`fp16` 为兼容旧 CLI 的原精度标签，实际加载 BF16。
+正式评测统一使用 [`launch`](automatic_evaluation.md) 入口，安装和权重路径见[安装与配置](getting_started.md)。
 
 ## 后台无代理下载
 

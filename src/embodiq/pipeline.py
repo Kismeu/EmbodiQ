@@ -42,7 +42,7 @@ def read(path):
 def capabilities():
     return {'models': ['openvla', 'vla_adapter', 'fastwam'],
             'methods': {'fp16': 'ready', 'rtn': 'ready', 'awq': 'pending', 'hsa': 'pending'},
-            'benchmark': 'libero', 'profiles': ['formal', 'smoke'],
+            'benchmark': 'libero', 'profiles': ['formal'],
             'execution': 'local, sequential, exclusive GPU', 'fastwam_mode': 'first_frame'}
 
 
@@ -59,8 +59,6 @@ def prepare_config(path, *, models=None, methods=None, suites=None, profile=None
     if profile is not None:
         cfg['profile'] = profile
     cfg.setdefault('profile', 'formal')
-    if cfg['profile'] == 'smoke':
-        cfg['trials_per_task'] = 1
     for method in cfg['enabled_methods']:
         if method not in AVAILABLE:
             raise ValueError(f'{method} is pending; automated execution supports fp16/rtn only')
@@ -238,8 +236,6 @@ def stage_command(root, plan, stage, gpu):
            '--inputs', str(root / 'resource_bench/inputs_v1.json'),
            '--suites', ','.join(plan['config']['benchmark']['suites']),
            '--out', str(root / 'resource_bench' / f'{stage["model"]}_{stage["method"]}.json')]
-    if plan['config']['profile'] == 'smoke':
-        cmd.append('--smoke')
     return cmd, env
 
 
@@ -305,6 +301,7 @@ def execute_pipeline(root, *, gpu=0, resume=False, wait_seconds=0):
         if digest(root / 'plan.json') != state['plan_sha256']:
             raise ValueError('plan was edited; create a new run')
         plan = read(root / 'plan.json')
+        build_plan(plan['config'])  # Reject obsolete or incomplete evaluation protocols.
         definitions = plan['stages']
         if len(definitions) != len(state['jobs']) or any(
                 any(s.get(k) != v for k, v in expected.items())

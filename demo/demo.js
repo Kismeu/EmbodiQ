@@ -11,8 +11,9 @@
       for(const [key,allowed] of [['models',data.capabilities.models],['methods',['fp16','rtn']],['suites',data.capabilities.suites]]){
         if(!Array.isArray(request[key])||!request[key].length||request[key].some(x=>!allowed.includes(x)))return json({error:'请选择支持的模型、方法和任务集合。'},400);
       }
+      if(request.profile && request.profile!=='formal')return json({error:'仅支持正式评测。'},400);
       const combinations=request.models.length*request.methods.length,rollouts=combinations*request.suites.length;
-      return json({total_stages:rollouts+combinations+1,episodes:rollouts*(request.profile==='formal'?500:1),profile:request.profile});
+      return json({total_stages:rollouts+combinations+1,episodes:rollouts*500,profile:'formal'});
     }
     if(path==='/api/runs'&&!options.method)return json({runs:data.runs,errors:[]});
     const match=path.match(/^\/api\/runs\/([^/]+)(?:\/(report|logs))?$/);
@@ -35,7 +36,7 @@
       const fields=Object.keys(report.cells[0]);const quote=x=>'"'+String(x??'').replaceAll('"','""')+'"';
       text='\uFEFF'+[fields,...report.cells.map(row=>fields.map(k=>row[k]))].map(row=>row.map(quote).join(',')).join('\n');mime='text/csv;charset=utf-8';
     }else{
-      text='# EmbodiQ 只读演示报告\n\n真实快速检查记录，不代表正式任务性能。\n\n'+JSON.stringify(report,null,2);mime='text/plain;charset=utf-8';
+      text='# EmbodiQ 只读演示报告\n\n已完成的正式实验历史汇总；资源测量口径见报告备注。\n\n'+JSON.stringify(report,null,2);mime='text/plain;charset=utf-8';
     }
     const url=URL.createObjectURL(new Blob([text],{type:mime})),a=document.createElement('a');a.href=url;a.download=file;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   });

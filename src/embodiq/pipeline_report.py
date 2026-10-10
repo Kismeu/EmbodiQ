@@ -87,7 +87,6 @@ def validate_rollout(root, plan, job):
 def validate_resource(root, plan, model, method):
     path = root / 'resource_bench' / f'{model}_{method}.json'
     d = read(path)
-    smoke = plan['config']['profile'] == 'smoke'
     manifest = read(root / 'resource_bench/inputs_v1.json')
     if d.get('schema') != 'embodiq/resource_bench/1' or d.get('phase') != 'complete':
         raise ValueError('resource result incomplete')
@@ -95,13 +94,13 @@ def validate_resource(root, plan, model, method):
         raise ValueError('resource model/method mismatch')
     if d.get('contended') is not False or d.get('contended_before') or d.get('contended_after'):
         raise ValueError('resource measurement was contended')
-    if d.get('validation_only') is not smoke:
+    if d.get('validation_only') is not False:
         raise ValueError('resource profile mismatch')
     if d.get('plan_sha256') != digest(root / 'plan.json'):
         raise ValueError('resource plan mismatch')
     if d.get('inputs_manifest_sha256') != manifest['manifest_sha256']:
         raise ValueError('resource input manifest mismatch')
-    if d.get('warmup_queries') != (2 if smoke else 20) or d.get('measured_passes') != (1 if smoke else 3):
+    if d.get('warmup_queries') != 20 or d.get('measured_passes') != 3:
         raise ValueError('resource warmup/pass mismatch')
     if set(d['suites']) != set(plan['config']['benchmark']['suites']):
         raise ValueError('resource suites incomplete')
@@ -110,9 +109,9 @@ def validate_resource(root, plan, model, method):
         p = read(rollout_records(root, job)[0])
         if Path(b['checkpoint']).resolve() != Path(job['checkpoint']).resolve():
             raise ValueError('resource checkpoint mismatch')
-        if b['n_inputs'] != (1 if smoke else 50) or b['n_queries_measured'] != (1 if smoke else 150):
+        if b['n_inputs'] != 50 or b['n_queries_measured'] != 150:
             raise ValueError('resource measurement count mismatch')
-        if b['passes'] != (1 if smoke else 3):
+        if b['passes'] != 3:
             raise ValueError('resource passes mismatch')
         if b['chunk_size'] != p['policy']['chunk_size'] or b['replan_steps'] != p['policy']['default_replan_steps']:
             raise ValueError('resource action schedule mismatch')
@@ -153,6 +152,8 @@ def validate_stage(root, plan, stage):
 def generate_report(root):
     root = Path(root).resolve()
     state, plan = read(root / 'run.json'), read(root / 'plan.json')
+    if plan['config'].get('profile', 'formal') != 'formal':
+        raise ValueError('only formal evaluation reports are supported')
     if state['plan_sha256'] != digest(root / 'plan.json'):
         raise ValueError('plan mismatch')
     if state.get('input_identity_sha256') != digest(root / 'input_identity.json'):
@@ -223,7 +224,7 @@ def generate_report(root):
            'n_episodes': sum(r['n_episodes'] for r in rows), 'cells': rows,
            'aggregates': aggregates, 'problems': problems, 'pending_methods': ['awq', 'hsa'],
            'caveats': ['原精度配置名 fp16，实际模型使用 BF16。',
-                       'smoke 仅验证流程；只有正式档位四集合完整才报告四集合宏平均。',
+                       '只有四个集合的正式评测全部完成，才报告四集合平均成功率。',
                        '资源输入取自成功训练演示的开发观测，不代表失败状态分布。',
                        '动作步摊销推理耗时不是机器人端到端响应时间。',
                        '权重、输入与源码在启动/恢复时校验，外部文件运行期间必须保持不变。']}
@@ -270,7 +271,7 @@ def plot(doc, out):
     axes[0].set_xlabel('Steady-state NVML peak (GiB)')
     axes[1].set_xlabel('Inference cost per action step (ms)')
     axes[1].legend(fontsize=7)
-    fig.suptitle('SMOKE: development validation only' if doc['profile'] == 'smoke' else 'Managed evaluation')
+    fig.suptitle('Managed evaluation')
     for ext in ('png', 'svg'):
         fig.savefig(out / f'tradeoffs.{ext}', dpi=160)
     plt.close(fig)
