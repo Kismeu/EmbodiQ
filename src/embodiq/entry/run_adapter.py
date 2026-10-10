@@ -48,7 +48,7 @@ SUITE_TO_CKPT = {
 # rtn/awq/hsa. Protocol section 6: the three methods must cover the same range,
 # or the 48-cell table is a collage of whichever range scored best. The per-model
 # asymmetry (OpenVLA llm-only) is deliberate and reported alongside
-# quantized_param_fraction -- see docs/task14_gap_analysis.md section 3.3.
+# quantized_param_fraction reports the share of model parameters quantized.
 MODEL_SCOPES = {
     "openvla": ["llm"],
     "vla_adapter": ["llm", "vision_dino", "vision_siglip", "projector", "action_head"],

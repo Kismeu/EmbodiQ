@@ -59,7 +59,7 @@ function dateLabel(run){
   const match=run.run_id.match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
   return match?`${match[2]}-${match[3]} ${match[4]}:${match[5]}:${match[6]}`:(run.created||'时间未记录');
 }
-function runLabel(run){return `${dateLabel(run)} · ${run.models.map(x=>modelNames[x]||x).join(' / ')} · ${run.source==='archive'?'历史结果汇总':'正式评测'} · ${run.run_id.slice(-4)}`;}
+function runLabel(run){return `${dateLabel(run)} · ${run.models.map(x=>modelNames[x]||x).join(' / ')} · ${run.source==='archive'?'已完成评测':'正式评测'} · ${run.run_id.slice(-4)}`;}
 function setOptions(id,options,value){
   const signature=JSON.stringify(options);if($(id).dataset.options!==signature){$(id).replaceChildren(...options.map(([text,v])=>new Option(text,v)));$(id).dataset.options=signature;}$(id).value=value;
 }
@@ -72,7 +72,7 @@ function selectRun(id){
 function renderStatus(data){
   state=data;$('runs').value=current;$('report-run').value=current;
   $('phase').textContent=data.stop_requested&&data.active?'正在停止':phases[data.phase]||'状态待确认';
-  $('run-meta').textContent=`${data.source==='archive'?'历史结果汇总':'正式评测'} · ${data.methods.map(x=>methodNames[x]||x).join('、')} · ${data.suites.map(x=>suiteNames[x]||x).join('、')}${data.gpu!==undefined?' · 显卡 '+data.gpu:''}`;
+  $('run-meta').textContent=`${data.source==='archive'?'已完成评测':'正式评测'} · ${data.methods.map(x=>methodNames[x]||x).join('、')} · ${data.suites.map(x=>suiteNames[x]||x).join('、')}${data.gpu!==undefined?' · 显卡 '+data.gpu:''}`;
   $('run-id').textContent=data.run_id;$('count').textContent=data.source==='archive'?`共 ${data.n_episodes.toLocaleString('en-US')} 回合`:`已完成 ${data.completed} / ${data.total} 阶段`;
   $('progress').hidden=data.source==='archive';$('progress').max=data.total||1;$('progress').value=data.completed;
   $('cancel').disabled=!data.active||data.stop_requested;$('resume').disabled=data.active||data.phase==='complete';$('load-report').disabled=data.phase!=='complete'||data.active||readingReport;
@@ -98,7 +98,7 @@ function renderRunList(){
   $('run-total').textContent=allRuns.length;$('run-empty').hidden=!!runs.length;$('run-empty').textContent=allRuns.length?'没有符合筛选条件的实验。':'还没有评测记录。点击“新建评测”开始。';
   const signature=JSON.stringify([runs,current]);if($('run-rows').dataset.rows===signature)return;$('run-rows').dataset.rows=signature;
   $('run-rows').replaceChildren(...runs.map(run=>{const tr=node('tr',undefined,run.run_id===current?'selected':undefined);
-    const title=node('td',run.models.map(x=>modelNames[x]||x).join(' / '));title.append(node('small',`${dateLabel(run)} · ${run.source==='archive'?'历史结果汇总':'正式评测'} · ${run.run_id.slice(-4)}`));
+    const title=node('td',run.models.map(x=>modelNames[x]||x).join(' / '));title.append(node('small',`${dateLabel(run)} · ${run.source==='archive'?'已完成评测':'正式评测'} · ${run.run_id.slice(-4)}`));
     const status=node('td');status.append(node('span',run.stop_requested&&run.active?'正在停止':phases[run.phase]||'状态待确认',`badge ${run.phase}`));
     const action=node('td'),button=node('button','查看详情','text-button');button.type='button';button.onclick=()=>{selectRun(run.run_id);$('monitor-title').scrollIntoView({block:'start'});};action.append(button);
     tr.append(title,node('td',run.methods.map(x=>methodNames[x]||x).join('、')),node('td',run.suites.map(x=>suiteNames[x]||x).join('、')),status,node('td',run.source==='archive'?`${run.n_episodes.toLocaleString('en-US')} 回合`:`${run.completed} / ${run.total} 阶段`),action);return tr;}));
@@ -178,7 +178,7 @@ function renderReport(){
   container.append(table(['模型','量化方法','任务集合','成功率','回合数','平均响应（毫秒）','运行峰值显存（GiB）','加载峰值显存（GiB）'],cells.map(c=>[modelNames[c.model]||c.model,methodNames[c.method]||c.method,suiteNames[c.suite]||c.suite,percent(c.success_rate),c.n_episodes,metric(c.query_ms),metric(c.steady_nvml_gib,3),metric(c.load_alloc_gib,3)])));
   container.append(node('p','运行峰值来自显卡监测，加载峰值来自推理框架，二者统计口径不同。各指标说明见下方“指标怎么看？”。','hint'));
   const links=node('div',undefined,'downloads');for(const [file,label] of [['report.md','下载完整报告'],['cells.csv','下载数据表'],['tradeoffs.svg','下载原始对比图']]){const a=node('a',label);a.href=`/api/runs/${current}/report/${file}`;a.download=file;links.append(a);}container.append(links);
-  const details=node('details',undefined,'technical');details.append(node('summary','技术备注与统计限制'));
+  const details=node('details',undefined,'technical');details.append(node('summary','数据说明'));
   for(const caveat of data.caveats||[])details.append(node('p',caveat));container.append(details);
 }
 $('load-report').onclick=async()=>{

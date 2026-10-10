@@ -48,7 +48,7 @@ def write_showcase(states, reports, out):
     static = ROOT / 'src/embodiq/web/static'
     html = (static / 'index.html').read_text().replace('href="/style.css"','href="./style.css"')
     html = html.replace('<script defer src="/app.js"></script>', '<script defer src="./demo-data.js"></script><script defer src="./demo.js"></script><script defer src="./app.js"></script>')
-    html = html.replace('<body>','<body><div class="demo-banner">只读演示 · 展示已完成的正式实验结果，配置预览不会启动模型。<a href="../README.md">安装与使用</a></div>')
+    html = html.replace('<body>','<body><div class="demo-banner">演示模式 · 可浏览与下载已完成的评测结果，不会启动模型。<a href="../README.md">安装与使用</a></div>')
     (out / 'index.html').write_text(html)
     shutil.copy2(static / 'app.js',out / 'app.js')
     css = (static / 'style.css').read_text()+'\n.demo-banner{background:#edf2fd;color:#284fa5;text-align:center;padding:10px 16px;font-size:12px;border-bottom:1px solid #d7e1fa}.demo-banner a{margin-left:15px;text-decoration:underline}.sidebar{top:40px}@media(max-width:680px){.sidebar{top:auto}}\n'
@@ -109,20 +109,20 @@ def build_matrix(path, out):
                 per_action_ms=sum(c['per_action_ms'] for c in selected) / 4,
                 steady_nvml_gib=max(c['steady_nvml_gib'] for c in selected)))
     run_id = 'formal_history_v3'
-    caveats = ['原始精度使用 BF16；RTN 为 W4、每组 128 个权重。',
-        '该页面汇总已有正式任务记录与固定输入资源专测，不是新建的托管运行，没有对应的阶段进度日志。',
-        '历史资源文件声明采样频率为 100 Hz，实际监测默认频率为 10 Hz；这些峰值未按新采样实现重新测量。',
-        '历史资源记录绑定权重路径和量化规格，未保存完整权重文件哈希。',
+    caveats = ['原始精度采用 BF16；RTN 使用 4 位权重，每组 128 个权重。',
+        '展示已完成评测的汇总结果，不是实时运行。',
+        '本组显存数据的采样间隔为 100 毫秒，可能遗漏短时峰值。',
+        '本组资源记录包含权重路径与量化配置，未保存完整权重文件指纹。',
         '查询耗时宜在同一模型内比较；不同模型的动作块长度与重规划频率不同。',
         '资源观测来自训练演示，仅用于测量耗时和显存；成功率来自独立的 12,000 个正式任务回合。']
     report = dict(schema='embodiq/showcase-report/1', run_id=run_id, profile='formal', formal=True,
         complete=True, n_episodes=12000, cells=rows, aggregates=aggregates, pending_methods=['awq', 'hsa'],
-        display_note='正式实验历史汇总 · 24 个组合 · 12,000 回合', caveats=caveats,
+        display_note='评测结果汇总 · 24 个组合 · 12,000 回合', caveats=caveats,
         provenance=dict(source_schema=doc['schema'], matrix_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
                         generated=doc['generated'], resource_sha256=hashes))
     status = dict(run_id=run_id, phase='complete', saved_phase='complete', active=False, source='archive',
-        created='正式实验历史汇总', profile='formal', models=models, methods=methods, suites=suites,
-        n_episodes=12000, reasons=['历史结果按模型、方法与任务集合汇总；阶段日志请在原实验记录中查看。'],
+        created='LIBERO 四类任务', profile='formal', models=models, methods=methods, suites=suites,
+        n_episodes=12000, reasons=[],
         stop_requested=False, completed=0, total=0, jobs=[])
     write_showcase([status], {run_id: report}, out)
 

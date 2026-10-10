@@ -1,25 +1,8 @@
-"""Export the exact layer list an AWQ/HSA artifact must cover, per model.
+"""Export the exact layer list required by a model's quantization artifact.
 
-`quant_artifact_contract.md` tells 1.2/1.3 that their artifact must cover exactly
-the layers this model's plan marks int4 — and `QuantArtifact.bind` enforces it.
-Telling them a *count* is not enough: a count they can match with the wrong set
-still fails, after they have spent the calibration. So this exports the layer
-names themselves, taken from the per-layer reports the completed RTN runs already
-wrote, which is the same plan the evaluator will compute at load time.
-
-Two things it verifies rather than assumes:
-
-* **The layer set is identical across a model's four suites.** The checkpoints
-  differ per suite but the architecture does not, so a divergence would mean the
-  scope is not actually a per-model property and the matrix could not share one
-  module range across suites.
-* **The counts match what the contract document publishes.** A silent drift
-  between the doc and the plan is exactly what would make a correct artifact get
-  rejected on arrival.
-
-Usage:
-    python tools/export_scope_manifest.py
-    python tools/export_scope_manifest.py --out artifacts/scope_manifest.json
+The layer names come from completed RTN reports. The exporter verifies that
+all four suites use the same layer set and that precision counts match the
+expected model scopes before writing the manifest.
 """
 
 from __future__ import annotations
@@ -39,7 +22,7 @@ from embodiq.entry.run_adapter import MODEL_SCOPES  # noqa: E402
 
 REPORT_ROOT = ROOT / "results/stage5_rtn_full"
 SUITES = ("libero_spatial", "libero_object", "libero_goal", "libero_10")
-# Published in quant_artifact_contract.md; an artifact is validated against these.
+# Expected precision counts for the supported model scopes.
 DOCUMENTED_INT4 = {"openvla": 224, "vla_adapter": 568, "fastwam": 600}
 DOCUMENTED_INT8 = {"openvla": 0, "vla_adapter": 28, "fastwam": 0}
 
@@ -73,7 +56,7 @@ def main() -> int:
         "purpose": ("The exact layer set an AWQ/HSA artifact must cover, per model. "
                     "Derived from the per-layer reports of the completed RTN runs, "
                     "which are the same plan the evaluator recomputes at load time."),
-        "contract": "docs/quant_artifact_contract.md",
+        "contract": "src/embodiq/quant/artifact.py",
         "group_size": 128,
         "w_bit": 4,
         "models": {},

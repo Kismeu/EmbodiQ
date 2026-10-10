@@ -236,17 +236,22 @@ def generate_report(root):
         writer = csv.DictWriter(f, fieldnames=fields, extrasaction='ignore')
         writer.writeheader()
         writer.writerows(rows)
-    title = '正式协议评测' if doc['formal'] else '开发验证 / 未通过正式准入'
-    md = [f'# {title}', '', f'运行：`{plan["run_id"]}`；档位：`{doc["profile"]}`；回合：{doc["n_episodes"]}。', '',
-          '| 模型 | 方法 | 所选集合平均成功率 % | 相对原精度 pp | 稳态 NVML GiB | 查询 ms |',
+    title = 'EmbodiQ 评测结果' if doc['formal'] else '评测结果未完成'
+    md = [f'# {title}', '', f'本次评测共 {doc["n_episodes"]:,} 回合。', '',
+          '| 模型 | 方法 | 所选集合平均成功率 | 相对原始精度变化（百分点） | 运行峰值显存（GiB） | 查询耗时（毫秒） |',
           '|---|---|---:|---:|---:|---:|']
+    model_names = {'openvla': 'OpenVLA', 'vla_adapter': 'VLA-Adapter', 'fastwam': 'FastWAM'}
+    method_names = {'fp16': '原始精度', 'rtn': 'RTN'}
     def fmt(x, multiplier=1):
         return '—' if x is None else f'{x * multiplier:.2f}'
     for r in aggregates:
-        md.append(f'| {r["model"]} | {r["method"]} | {fmt(r["selected_suites_success_rate"],100)} | {fmt(r["delta_pp_vs_fp16"])} | {fmt(r["steady_nvml_gib"])} | {fmt(r["query_ms"])} |')
-    md.extend(['', '![性能与资源对比](tradeoffs.png)', '', *doc['caveats'], '', 'AWQ/HSA 待接入。'])
+        md.append(f'| {model_names.get(r["model"], r["model"])} | {method_names.get(r["method"], r["method"])} | {fmt(r["selected_suites_success_rate"],100)} | {fmt(r["delta_pp_vs_fp16"])} | {fmt(r["steady_nvml_gib"])} | {fmt(r["query_ms"])} |')
+    md.extend(['', '成功率以百分比表示。查询耗时宜在同一模型内比较；运行峰值与加载峰值分别统计。',
+               '', '![性能与资源对比](tradeoffs.png)', '', '## 数据说明', '',
+               *[f'- {text}' for text in doc['caveats']], '', 'AWQ、HSA 不包含在本次评测中。',
+               '', '<details><summary>实验编号</summary>', '', f'`{plan["run_id"]}`', '', '</details>'])
     if problems:
-        md.extend(['', '准入问题：', '', *[f'- {p}' for p in problems]])
+        md.extend(['', '需要处理的问题：', '', *[f'- {problem}' for problem in problems]])
     (out / 'report.md').write_text('\n'.join(md) + '\n')
     if not problems:
         plot(doc, out)
