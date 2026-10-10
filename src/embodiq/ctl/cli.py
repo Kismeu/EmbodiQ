@@ -30,7 +30,7 @@ def _parser() -> argparse.ArgumentParser:
     launch.add_argument('--models', nargs='+', choices=('openvla', 'vla_adapter', 'fastwam'))
     launch.add_argument('--methods', nargs='+', choices=('fp16', 'rtn', 'awq', 'hsa'))
     launch.add_argument('--suites', nargs='+')
-    launch.add_argument('--profile', choices=('formal', 'smoke'), default=None)
+    launch.add_argument('--profile', choices=('formal',), default=None)
     launch.add_argument('--gpu', type=int, default=0)
     launch.add_argument('--wait-seconds', type=float, default=0, help='GPU 忙碌时最多等待秒数；超时保留可恢复状态')
     launch.add_argument('--out-root', default=None)

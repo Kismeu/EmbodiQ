@@ -33,7 +33,7 @@ function choices(id,values,names,enabled=()=>true,selected=()=>true){
     if(id==='suites')text.append(node('small',suiteDescriptions[value]||''));label.append(input,text);return label;}));
 }
 function selection(){
-  const body={profile:$('profile').value,gpu:Number($('gpu').value),wait_seconds:Number($('wait').value)};
+  const body={profile:'formal',gpu:Number($('gpu').value),wait_seconds:Number($('wait').value)};
   for(const name of ['models','methods','suites'])body[name]=[...$(name).querySelectorAll('input:checked')].map(x=>x.value);
   return body;
 }
@@ -41,7 +41,7 @@ async function preview(){
   const revision=++previewRevision;const body=selection();$('submit').disabled=true;
   const summary=$('selection-summary');summary.replaceChildren();
   for(const [label,value] of [['模型',body.models.map(x=>modelNames[x]).join('、')],['量化方法',body.methods.map(x=>methodNames[x]).join('、')],['任务集合',body.suites.map(x=>suiteNames[x]).join('、')],['运行设备',`显卡 ${body.gpu}`]])summary.append(node('dt',label),node('dd',value||'尚未选择'));
-  $('profile-note').textContent=body.profile==='smoke'?'快速检查只确认流程可用，不用于正式性能比较。':'每个集合包含 10 项任务，每项重复 50 回合。';
+  $('profile-note').textContent='每个集合包含 10 项任务，每项重复 50 回合。';
   const missing=[['models','模型'],['methods','量化方法'],['suites','任务集合']].find(([key])=>!body[key].length);
   if(missing){$('estimate').textContent=`请至少选择一个${missing[1]}。`;return;}
   if(!$('gpu').checkValidity()||!$('wait').checkValidity()){$('estimate').textContent='请填写有效的显卡编号和等待秒数。';return;}
@@ -59,7 +59,7 @@ function dateLabel(run){
   const match=run.run_id.match(/^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})/);
   return match?`${match[2]}-${match[3]} ${match[4]}:${match[5]}:${match[6]}`:(run.created||'时间未记录');
 }
-function runLabel(run){return `${dateLabel(run)} · ${run.models.map(x=>modelNames[x]||x).join(' / ')} · ${run.profile==='smoke'?'快速检查':'正式评测'} · ${run.run_id.slice(-4)}`;}
+function runLabel(run){return `${dateLabel(run)} · ${run.models.map(x=>modelNames[x]||x).join(' / ')} · ${run.source==='archive'?'已完成评测':'正式评测'} · ${run.run_id.slice(-4)}`;}
 function setOptions(id,options,value){
   const signature=JSON.stringify(options);if($(id).dataset.options!==signature){$(id).replaceChildren(...options.map(([text,v])=>new Option(text,v)));$(id).dataset.options=signature;}$(id).value=value;
 }
@@ -72,9 +72,9 @@ function selectRun(id){
 function renderStatus(data){
   state=data;$('runs').value=current;$('report-run').value=current;
   $('phase').textContent=data.stop_requested&&data.active?'正在停止':phases[data.phase]||'状态待确认';
-  $('run-meta').textContent=`${data.profile==='smoke'?'快速检查':'正式评测'} · ${data.methods.map(x=>methodNames[x]||x).join('、')} · ${data.suites.map(x=>suiteNames[x]||x).join('、')}${data.gpu!==undefined?' · 显卡 '+data.gpu:''}`;
-  $('run-id').textContent=data.run_id;$('count').textContent=`已完成 ${data.completed} / ${data.total} 阶段`;
-  $('progress').max=data.total||1;$('progress').value=data.completed;
+  $('run-meta').textContent=`${data.source==='archive'?'已完成评测':'正式评测'} · ${data.methods.map(x=>methodNames[x]||x).join('、')} · ${data.suites.map(x=>suiteNames[x]||x).join('、')}${data.gpu!==undefined?' · 显卡 '+data.gpu:''}`;
+  $('run-id').textContent=data.run_id;$('count').textContent=data.source==='archive'?`共 ${data.n_episodes.toLocaleString('en-US')} 回合`:`已完成 ${data.completed} / ${data.total} 阶段`;
+  $('progress').hidden=data.source==='archive';$('progress').max=data.total||1;$('progress').value=data.completed;
   $('cancel').disabled=!data.active||data.stop_requested;$('resume').disabled=data.active||data.phase==='complete';$('load-report').disabled=data.phase!=='complete'||data.active||readingReport;
   $('reasons').textContent=data.reasons.map(readableError).join('\n')||(data.phase==='interrupted'?'执行进程已退出。点击“继续评测”后，将检查已完成结果并恢复运行。':'');
   const signature=JSON.stringify(data.jobs);
@@ -98,10 +98,10 @@ function renderRunList(){
   $('run-total').textContent=allRuns.length;$('run-empty').hidden=!!runs.length;$('run-empty').textContent=allRuns.length?'没有符合筛选条件的实验。':'还没有评测记录。点击“新建评测”开始。';
   const signature=JSON.stringify([runs,current]);if($('run-rows').dataset.rows===signature)return;$('run-rows').dataset.rows=signature;
   $('run-rows').replaceChildren(...runs.map(run=>{const tr=node('tr',undefined,run.run_id===current?'selected':undefined);
-    const title=node('td',run.models.map(x=>modelNames[x]||x).join(' / '));title.append(node('small',`${dateLabel(run)} · ${run.profile==='smoke'?'快速检查':'正式评测'} · ${run.run_id.slice(-4)}`));
+    const title=node('td',run.models.map(x=>modelNames[x]||x).join(' / '));title.append(node('small',`${dateLabel(run)} · ${run.source==='archive'?'已完成评测':'正式评测'} · ${run.run_id.slice(-4)}`));
     const status=node('td');status.append(node('span',run.stop_requested&&run.active?'正在停止':phases[run.phase]||'状态待确认',`badge ${run.phase}`));
     const action=node('td'),button=node('button','查看详情','text-button');button.type='button';button.onclick=()=>{selectRun(run.run_id);$('monitor-title').scrollIntoView({block:'start'});};action.append(button);
-    tr.append(title,node('td',run.methods.map(x=>methodNames[x]||x).join('、')),node('td',run.suites.map(x=>suiteNames[x]||x).join('、')),status,node('td',`${run.completed} / ${run.total} 阶段`),action);return tr;}));
+    tr.append(title,node('td',run.methods.map(x=>methodNames[x]||x).join('、')),node('td',run.suites.map(x=>suiteNames[x]||x).join('、')),status,node('td',run.source==='archive'?`${run.n_episodes.toLocaleString('en-US')} 回合`:`${run.completed} / ${run.total} 阶段`),action);return tr;}));
 }
 async function logs(){
   if(!current||!$('log-details').open)return;const id=current,stage=$('log-stage').value;
@@ -110,7 +110,7 @@ async function logs(){
 }
 async function refresh(){
   if(refreshing)return;refreshing=true;
-  try{const data=await api('runs');allRuns=data.runs;$('connection').textContent='已连接 · 每 3 秒更新';
+  try{const data=await api('runs');allRuns=data.runs.filter(run=>run.profile==='formal');$('connection').textContent='已连接 · 每 3 秒更新';
     if(!allRuns.some(run=>run.run_id===current)){current=allRuns[0]?.run_id||'';clearReport();}
     const options=allRuns.length?allRuns.map(run=>[runLabel(run),run.run_id]):[['暂无实验','']];
     setOptions('runs',options,current);setOptions('report-run',options,current);
@@ -161,7 +161,7 @@ function chart(title,description,rows,key,format,fixedMax){
 }
 function renderReport(){
   if(!reportData)return;const data=reportData,container=$('report');container.replaceChildren();
-  container.append(node('p',data.formal?'正式评测 · 保存的结果已通过完整性检查':`快速检查 · 共 ${data.n_episodes} 回合，仅用于确认流程可运行，不代表正式性能。`,`report-label${data.formal?' formal':''}`));
+  container.append(node('p',data.display_note||(data.formal?'正式评测 · 保存的结果已通过完整性检查':'结果未满足正式评测条件'),`report-label${data.formal?' formal':''}`));
   const toolbar=node('div',undefined,'report-toolbar'),tabs=node('div',undefined,'suite-tabs');tabs.setAttribute('aria-label','筛选任务集合');
   const suites=[...new Set(data.cells.map(c=>c.suite))];
   for(const [value,label] of [['all','全部集合'],...suites.map(s=>[s,suiteNames[s]||s])]){const button=node('button',label);button.type='button';button.setAttribute('aria-pressed',String(reportSuite===value));button.onclick=()=>{reportSuite=value;renderReport();[...$('report').querySelectorAll('.suite-tabs button')].find(b=>b.getAttribute('aria-pressed')==='true')?.focus();};tabs.append(button);}
@@ -178,7 +178,7 @@ function renderReport(){
   container.append(table(['模型','量化方法','任务集合','成功率','回合数','平均响应（毫秒）','运行峰值显存（GiB）','加载峰值显存（GiB）'],cells.map(c=>[modelNames[c.model]||c.model,methodNames[c.method]||c.method,suiteNames[c.suite]||c.suite,percent(c.success_rate),c.n_episodes,metric(c.query_ms),metric(c.steady_nvml_gib,3),metric(c.load_alloc_gib,3)])));
   container.append(node('p','运行峰值来自显卡监测，加载峰值来自推理框架，二者统计口径不同。各指标说明见下方“指标怎么看？”。','hint'));
   const links=node('div',undefined,'downloads');for(const [file,label] of [['report.md','下载完整报告'],['cells.csv','下载数据表'],['tradeoffs.svg','下载原始对比图']]){const a=node('a',label);a.href=`/api/runs/${current}/report/${file}`;a.download=file;links.append(a);}container.append(links);
-  const details=node('details',undefined,'technical');details.append(node('summary','技术备注与统计限制'));
+  const details=node('details',undefined,'technical');details.append(node('summary','数据说明'));
   for(const caveat of data.caveats||[])details.append(node('p',caveat));container.append(details);
 }
 $('load-report').onclick=async()=>{
@@ -188,7 +188,7 @@ $('load-report').onclick=async()=>{
 };
 (async()=>{
   try{const caps=await api('capabilities');token=caps.csrf_token;
-    choices('models',caps.models,modelNames);choices('methods',Object.keys(caps.methods),methodNames,x=>caps.methods[x]==='ready');choices('suites',caps.suites,suiteNames,()=>true,x=>x==='libero_spatial');
+    choices('models',caps.models,modelNames);choices('methods',Object.keys(caps.methods),methodNames,x=>caps.methods[x]==='ready');choices('suites',caps.suites,suiteNames);
     await preview();await refresh();setInterval(refresh,3000);
   }catch(e){notice('页面初始化失败：'+e.message);}
 })();

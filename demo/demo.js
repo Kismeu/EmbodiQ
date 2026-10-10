@@ -11,8 +11,9 @@
       for(const [key,allowed] of [['models',data.capabilities.models],['methods',['fp16','rtn']],['suites',data.capabilities.suites]]){
         if(!Array.isArray(request[key])||!request[key].length||request[key].some(x=>!allowed.includes(x)))return json({error:'请选择支持的模型、方法和任务集合。'},400);
       }
+      if(request.profile && request.profile!=='formal')return json({error:'仅支持正式评测。'},400);
       const combinations=request.models.length*request.methods.length,rollouts=combinations*request.suites.length;
-      return json({total_stages:rollouts+combinations+1,episodes:rollouts*(request.profile==='formal'?500:1),profile:request.profile});
+      return json({total_stages:rollouts+combinations+1,episodes:rollouts*500,profile:'formal'});
     }
     if(path==='/api/runs'&&!options.method)return json({runs:data.runs,errors:[]});
     const match=path.match(/^\/api\/runs\/([^/]+)(?:\/(report|logs))?$/);
@@ -35,7 +36,15 @@
       const fields=Object.keys(report.cells[0]);const quote=x=>'"'+String(x??'').replaceAll('"','""')+'"';
       text='\uFEFF'+[fields,...report.cells.map(row=>fields.map(k=>row[k]))].map(row=>row.map(quote).join(',')).join('\n');mime='text/csv;charset=utf-8';
     }else{
-      text='# EmbodiQ 只读演示报告\n\n真实快速检查记录，不代表正式任务性能。\n\n'+JSON.stringify(report,null,2);mime='text/plain;charset=utf-8';
+      const models={openvla:'OpenVLA',vla_adapter:'VLA-Adapter',fastwam:'FastWAM'},methods={fp16:'原始精度',rtn:'RTN'},suites={libero_spatial:'空间关系',libero_object:'目标物体',libero_goal:'任务目标',libero_10:'长时程操作'};
+      const format=(x,n=2)=>typeof x==='number'&&Number.isFinite(x)?x.toFixed(n):'—';
+      const lines=['# EmbodiQ 评测结果','',`共 ${report.n_episodes.toLocaleString('en-US')} 回合；以下为已完成的评测结果。`,'',
+        '## 汇总结果','', '| 模型 | 方法 | 四集合平均成功率 | 查询耗时（毫秒） | 运行峰值显存（GiB） |','|---|---|---:|---:|---:|'];
+      for(const r of report.aggregates)lines.push(`| ${models[r.model]} | ${methods[r.method]} | ${format(r.four_suite_macro_success_rate*100)}% | ${format(r.query_ms,1)} | ${format(r.steady_nvml_gib)} |`);
+      lines.push('','## 分集合结果','','| 模型 | 方法 | 任务集合 | 成功率 | 回合数 |','|---|---|---|---:|---:|');
+      for(const c of report.cells)lines.push(`| ${models[c.model]} | ${methods[c.method]} | ${suites[c.suite]} | ${format(c.success_rate*100)}% | ${c.n_episodes} |`);
+      lines.push('','## 数据说明','',...report.caveats.map(x=>'- '+x));
+      text=lines.join('\n')+'\n';mime='text/markdown;charset=utf-8';
     }
     const url=URL.createObjectURL(new Blob([text],{type:mime})),a=document.createElement('a');a.href=url;a.download=file;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   });

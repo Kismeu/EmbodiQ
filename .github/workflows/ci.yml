@@ -21,4 +21,4 @@ jobs:
           python -m pytest -q
           tests/test_config.py tests/test_controller_status.py
           tests/test_contract_and_rollout.py tests/test_report_matrix.py
-      - run: python -m embodiq.ctl.cli launch configs/stage_fp16_rtn.json --profile smoke --dry-run
+      - run: python -m embodiq.ctl.cli launch configs/stage_fp16_rtn.json --profile formal --dry-run

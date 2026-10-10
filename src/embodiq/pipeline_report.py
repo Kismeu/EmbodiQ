@@ -87,7 +87,6 @@ def validate_rollout(root, plan, job):
 def validate_resource(root, plan, model, method):
     path = root / 'resource_bench' / f'{model}_{method}.json'
     d = read(path)
-    smoke = plan['config']['profile'] == 'smoke'
     manifest = read(root / 'resource_bench/inputs_v1.json')
     if d.get('schema') != 'embodiq/resource_bench/1' or d.get('phase') != 'complete':
         raise ValueError('resource result incomplete')
@@ -95,13 +94,13 @@ def validate_resource(root, plan, model, method):
         raise ValueError('resource model/method mismatch')
     if d.get('contended') is not False or d.get('contended_before') or d.get('contended_after'):
         raise ValueError('resource measurement was contended')
-    if d.get('validation_only') is not smoke:
+    if d.get('validation_only') is not False:
         raise ValueError('resource profile mismatch')
     if d.get('plan_sha256') != digest(root / 'plan.json'):
         raise ValueError('resource plan mismatch')
     if d.get('inputs_manifest_sha256') != manifest['manifest_sha256']:
         raise ValueError('resource input manifest mismatch')
-    if d.get('warmup_queries') != (2 if smoke else 20) or d.get('measured_passes') != (1 if smoke else 3):
+    if d.get('warmup_queries') != 20 or d.get('measured_passes') != 3:
         raise ValueError('resource warmup/pass mismatch')
     if set(d['suites']) != set(plan['config']['benchmark']['suites']):
         raise ValueError('resource suites incomplete')
@@ -110,9 +109,9 @@ def validate_resource(root, plan, model, method):
         p = read(rollout_records(root, job)[0])
         if Path(b['checkpoint']).resolve() != Path(job['checkpoint']).resolve():
             raise ValueError('resource checkpoint mismatch')
-        if b['n_inputs'] != (1 if smoke else 50) or b['n_queries_measured'] != (1 if smoke else 150):
+        if b['n_inputs'] != 50 or b['n_queries_measured'] != 150:
             raise ValueError('resource measurement count mismatch')
-        if b['passes'] != (1 if smoke else 3):
+        if b['passes'] != 3:
             raise ValueError('resource passes mismatch')
         if b['chunk_size'] != p['policy']['chunk_size'] or b['replan_steps'] != p['policy']['default_replan_steps']:
             raise ValueError('resource action schedule mismatch')
@@ -153,6 +152,8 @@ def validate_stage(root, plan, stage):
 def generate_report(root):
     root = Path(root).resolve()
     state, plan = read(root / 'run.json'), read(root / 'plan.json')
+    if plan['config'].get('profile', 'formal') != 'formal':
+        raise ValueError('only formal evaluation reports are supported')
     if state['plan_sha256'] != digest(root / 'plan.json'):
         raise ValueError('plan mismatch')
     if state.get('input_identity_sha256') != digest(root / 'input_identity.json'):
@@ -223,7 +224,7 @@ def generate_report(root):
            'n_episodes': sum(r['n_episodes'] for r in rows), 'cells': rows,
            'aggregates': aggregates, 'problems': problems, 'pending_methods': ['awq', 'hsa'],
            'caveats': ['原精度配置名 fp16，实际模型使用 BF16。',
-                       'smoke 仅验证流程；只有正式档位四集合完整才报告四集合宏平均。',
+                       '只有四个集合的正式评测全部完成，才报告四集合平均成功率。',
                        '资源输入取自成功训练演示的开发观测，不代表失败状态分布。',
                        '动作步摊销推理耗时不是机器人端到端响应时间。',
                        '权重、输入与源码在启动/恢复时校验，外部文件运行期间必须保持不变。']}
@@ -235,17 +236,22 @@ def generate_report(root):
         writer = csv.DictWriter(f, fieldnames=fields, extrasaction='ignore')
         writer.writeheader()
         writer.writerows(rows)
-    title = '正式协议评测' if doc['formal'] else '开发验证 / 未通过正式准入'
-    md = [f'# {title}', '', f'运行：`{plan["run_id"]}`；档位：`{doc["profile"]}`；回合：{doc["n_episodes"]}。', '',
-          '| 模型 | 方法 | 所选集合平均成功率 % | 相对原精度 pp | 稳态 NVML GiB | 查询 ms |',
+    title = 'EmbodiQ 评测结果' if doc['formal'] else '评测结果未完成'
+    md = [f'# {title}', '', f'本次评测共 {doc["n_episodes"]:,} 回合。', '',
+          '| 模型 | 方法 | 所选集合平均成功率 | 相对原始精度变化（百分点） | 运行峰值显存（GiB） | 查询耗时（毫秒） |',
           '|---|---|---:|---:|---:|---:|']
+    model_names = {'openvla': 'OpenVLA', 'vla_adapter': 'VLA-Adapter', 'fastwam': 'FastWAM'}
+    method_names = {'fp16': '原始精度', 'rtn': 'RTN'}
     def fmt(x, multiplier=1):
         return '—' if x is None else f'{x * multiplier:.2f}'
     for r in aggregates:
-        md.append(f'| {r["model"]} | {r["method"]} | {fmt(r["selected_suites_success_rate"],100)} | {fmt(r["delta_pp_vs_fp16"])} | {fmt(r["steady_nvml_gib"])} | {fmt(r["query_ms"])} |')
-    md.extend(['', '![性能与资源对比](tradeoffs.png)', '', *doc['caveats'], '', 'AWQ/HSA 待接入。'])
+        md.append(f'| {model_names.get(r["model"], r["model"])} | {method_names.get(r["method"], r["method"])} | {fmt(r["selected_suites_success_rate"],100)} | {fmt(r["delta_pp_vs_fp16"])} | {fmt(r["steady_nvml_gib"])} | {fmt(r["query_ms"])} |')
+    md.extend(['', '成功率以百分比表示。查询耗时宜在同一模型内比较；运行峰值与加载峰值分别统计。',
+               '', '![性能与资源对比](tradeoffs.png)', '', '## 数据说明', '',
+               *[f'- {text}' for text in doc['caveats']], '', 'AWQ、HSA 不包含在本次评测中。',
+               '', '<details><summary>实验编号</summary>', '', f'`{plan["run_id"]}`', '', '</details>'])
     if problems:
-        md.extend(['', '准入问题：', '', *[f'- {p}' for p in problems]])
+        md.extend(['', '需要处理的问题：', '', *[f'- {problem}' for problem in problems]])
     (out / 'report.md').write_text('\n'.join(md) + '\n')
     if not problems:
         plot(doc, out)
@@ -270,7 +276,7 @@ def plot(doc, out):
     axes[0].set_xlabel('Steady-state NVML peak (GiB)')
     axes[1].set_xlabel('Inference cost per action step (ms)')
     axes[1].legend(fontsize=7)
-    fig.suptitle('SMOKE: development validation only' if doc['profile'] == 'smoke' else 'Managed evaluation')
+    fig.suptitle('Managed evaluation')
     for ext in ('png', 'svg'):
         fig.savefig(out / f'tradeoffs.{ext}', dpi=160)
     plt.close(fig)
