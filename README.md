@@ -51,6 +51,7 @@
 | [OpenVLA](https://github.com/openvla/openvla) | 已支持 | 已支持 | 待接入 | 待接入 |
 | [VLA-Adapter](https://github.com/OpenHelix-Team/VLA-Adapter) | 已支持 | 已支持 | 待接入 | 待接入 |
 | [FastWAM](https://github.com/yuantianyuan01/FastWAM) | 已支持 | 已支持 | 待接入 | 待接入 |
+|更多模型&测评指标&量化方法接入中...|
 
 原始精度实际使用 **BF16**，配置名称沿用 `fp16`；RTN 使用 **4 位权重、每组 128 个权重**。FastWAM 的自动对比固定使用首帧模式（`first-frame`）。AWQ、HSA 的预留接口不表示已完成适配或验证，平台不会为它们生成占位分数。
 
@@ -70,8 +71,8 @@
 
 | 资源 | 准备内容 |
 | :--- | :--- |
-| OpenVLA / VLA-Adapter | 模型源码、对应 LIBERO 任务集合的权重、独立 Python 运行环境 |
-| FastWAM | 模型源码、首帧动作预测权重、归一化统计文件、独立 Python 运行环境 |
+| [OpenVLA](https://github.com/openvla/openvla) / [VLA-Adapter](https://github.com/OpenHelix-Team/VLA-Adapter) | 模型源码、对应 LIBERO 任务集合的权重、独立 Python 运行环境 |
+| [FastWAM](https://github.com/yuantianyuan01/FastWAM) | 模型源码、首帧动作预测权重、归一化统计文件、独立 Python 运行环境 |
 | [LIBERO 仿真评测环境](https://github.com/Lifelong-Robot-Learning/LIBERO) | 仿真资产、任务定义、初始状态及无头渲染依赖 |
 | 固定评测输入 | 回合清单与资源测量观测，准备方式见[评测输入说明](docs/getting_started.md#3-固定评测输入) |
 
