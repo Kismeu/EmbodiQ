@@ -4,9 +4,172 @@
   "read_only": true,
   "real_evaluation_submitted": false,
   "format": "webm",
-  "viewport": [
-    1440,
-    1000
+  "viewport": {
+    "width": 1600,
+    "height": 900
+  },
+  "caption_font_px": 29,
+  "caption_reserved_height": 114,
+  "viewport_checks": [
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    },
+    {
+      "width": 1600,
+      "height": 900,
+      "captionHeight": 114
+    }
   ],
-  "caption_font_px": 30
+  "viewport_violations": [],
+  "scenes": [
+    {
+      "chapter": "01",
+      "title": "选择配置",
+      "text": "从选择模型到导出报告，用同一组配置走完整个评测流程。",
+      "start_s": 0,
+      "settled_s": 1.025,
+      "end_s": 7.026
+    },
+    {
+      "chapter": "01",
+      "title": "选择模型",
+      "text": "以 VLA-Adapter 为例，对比原始精度与 RTN 四位量化。",
+      "start_s": 7.026,
+      "settled_s": 11.54,
+      "end_s": 18.541
+    },
+    {
+      "chapter": "01",
+      "title": "任务范围",
+      "text": "保留四类任务，右侧汇总所选模型、方法和评测规模。",
+      "start_s": 18.541,
+      "settled_s": 21.156,
+      "end_s": 27.161
+    },
+    {
+      "chapter": "02",
+      "title": "查看任务",
+      "text": "点击“查看本配置示例”，进入对应的任务记录。",
+      "start_s": 27.161,
+      "settled_s": 29.872,
+      "end_s": 35.874
+    },
+    {
+      "chapter": "02",
+      "title": "核对内容",
+      "text": "任务评测、资源测量和报告，均对应刚才选定的配置。",
+      "start_s": 35.874,
+      "settled_s": 37.838,
+      "end_s": 44.841
+    },
+    {
+      "chapter": "03",
+      "title": "任务表现",
+      "text": "查看成功率折线图：灰色为原始精度，绿色为 RTN。",
+      "start_s": 44.841,
+      "settled_s": 48.006,
+      "end_s": 57.006
+    },
+    {
+      "chapter": "03",
+      "title": "读取图表",
+      "text": "横轴为四类任务，纵轴为成功率；每个点标出对应数值。",
+      "start_s": 57.006,
+      "settled_s": 58.704,
+      "end_s": 65.705
+    },
+    {
+      "chapter": "04",
+      "title": "速度与显存",
+      "text": "切换到资源对比，同时观察查询耗时和显存变化。",
+      "start_s": 65.705,
+      "settled_s": 68.871,
+      "end_s": 77.876
+    },
+    {
+      "chapter": "04",
+      "title": "按任务查看",
+      "text": "也可以切换任务集合，比较同一类任务下的资源占用。",
+      "start_s": 77.876,
+      "settled_s": 81.953,
+      "end_s": 88.954
+    },
+    {
+      "chapter": "05",
+      "title": "导出报告",
+      "text": "回到全部集合，下载报告和数据表，保留完整对比结果。",
+      "start_s": 88.954,
+      "settled_s": 94.219,
+      "end_s": 101.224
+    },
+    {
+      "chapter": "05",
+      "title": "导出图表",
+      "text": "任务成功率图支持 SVG 导出，可直接用于汇报或论文排版。",
+      "start_s": 101.224,
+      "settled_s": 103.453,
+      "end_s": 110.459
+    },
+    {
+      "chapter": "05",
+      "title": "完成",
+      "text": "配置评测 → 查看任务 → 对比结果。演示不启动模型。",
+      "start_s": 110.46,
+      "settled_s": 114.535,
+      "end_s": 120.542
+    }
+  ],
+  "screenshots_during_recording": 0
 }

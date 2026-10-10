@@ -56,7 +56,7 @@ def write_showcase(states, reports, out):
         source = ROOT / 'demo' / name
         if source.resolve() != (out / name).resolve():
             shutil.copy2(source, out / name)
-    css = (static / 'style.css').read_text()+'\n.demo-banner{background:#edf2fd;color:#284fa5;text-align:center;padding:10px 16px;font-size:12px;border-bottom:1px solid #d7e1fa}.demo-banner a{margin-left:15px;text-decoration:underline}.sidebar{top:40px}@media(max-width:680px){.sidebar{top:auto}}\n'
+    css = (static / 'style.css').read_text()+'\n.demo-banner{background:#eaf3ee;color:#345f4d;text-align:center;padding:10px 16px;font-size:12px;border-bottom:1px solid #d8e5dc}.demo-banner a{margin-left:15px;text-decoration:underline}.sidebar{top:40px}@media(max-width:680px){.sidebar{top:auto}}\n'
     (out / 'style.css').write_text(css)
     print(f'exported {len(states)} verified runs to {out}')
 
