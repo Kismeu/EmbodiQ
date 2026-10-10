@@ -6,6 +6,11 @@
 <a href="#安装">安装</a> · <a href="#模型与数据准备">模型与数据</a> · <a href="#配置">配置</a> · <a href="#运行">运行</a> · <a href="#演示">演示</a>
 </p>
 
+## Updates
+
+- **[2026-10-10]** Initial release of code.
+- ...
+
 ## 安装
 
 使用 Linux、Python 3.10+；运行模型评测需要 NVIDIA GPU。
@@ -28,6 +33,8 @@ python -m pip install -e '.[ctl]'
 | OpenVLA | [openvla/openvla](https://github.com/openvla/openvla) | 原始精度、RTN |
 | VLA-Adapter | [OpenHelix-Team/VLA-Adapter](https://github.com/OpenHelix-Team/VLA-Adapter) | 原始精度、RTN |
 | FastWAM | [yuantianyuan01/FastWAM](https://github.com/yuantianyuan01/FastWAM) | 原始精度、RTN |
+
+**更多模型、量化方法、仿真测试持续接入中...**
 
 安装 [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO)，准备仿真资产、初始状态与评测输入。具体步骤见[安装与配置](docs/getting_started.md)。
 
