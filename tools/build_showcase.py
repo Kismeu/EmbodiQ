@@ -47,10 +47,15 @@ def write_showcase(states, reports, out):
     (out / 'demo-data.js').write_text('window.EMBODIQ_DEMO = '+serialized+';\n')
     static = ROOT / 'src/embodiq/web/static'
     html = (static / 'index.html').read_text().replace('href="/style.css"','href="./style.css"')
-    html = html.replace('<script defer src="/app.js"></script>', '<script defer src="./demo-data.js"></script><script defer src="./demo.js"></script><script defer src="./app.js"></script>')
-    html = html.replace('<body>','<body><div class="demo-banner">演示模式 · 可浏览与下载已完成的评测结果，不会启动模型。<a href="../README.md">安装与使用</a></div>')
+    html = html.replace('<script defer src="/app.js"></script>', '<script defer src="./demo-data.js"></script><script defer src="./demo.js"></script><script defer src="./app.js"></script><script defer src="./guide.js"></script>')
+    html = html.replace('</head>', '<link rel="stylesheet" href="./guide.css"></head>')
+    html = html.replace('<body>','<body><div class="demo-banner">只读演示 · 按三个步骤浏览已完成的评测，不会启动模型。<a href="../README.md">安装与使用</a></div>')
     (out / 'index.html').write_text(html)
     shutil.copy2(static / 'app.js',out / 'app.js')
+    for name in ('demo.js', 'guide.js', 'guide.css'):
+        source = ROOT / 'demo' / name
+        if source.resolve() != (out / name).resolve():
+            shutil.copy2(source, out / name)
     css = (static / 'style.css').read_text()+'\n.demo-banner{background:#edf2fd;color:#284fa5;text-align:center;padding:10px 16px;font-size:12px;border-bottom:1px solid #d7e1fa}.demo-banner a{margin-left:15px;text-decoration:underline}.sidebar{top:40px}@media(max-width:680px){.sidebar{top:auto}}\n'
     (out / 'style.css').write_text(css)
     print(f'exported {len(states)} verified runs to {out}')
