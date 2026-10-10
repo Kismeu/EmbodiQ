@@ -48,9 +48,9 @@
 
 | 模型 | 原始精度 | RTN 四位量化 | AWQ | HSA |
 | :--- | :---: | :---: | :---: | :---: |
-| OpenVLA | 已支持 | 已支持 | 待接入 | 待接入 |
-| VLA-Adapter | 已支持 | 已支持 | 待接入 | 待接入 |
-| FastWAM | 已支持 | 已支持 | 待接入 | 待接入 |
+| [OpenVLA](https://github.com/openvla/openvla) | 已支持 | 已支持 | 待接入 | 待接入 |
+| [VLA-Adapter](https://github.com/OpenHelix-Team/VLA-Adapter) | 已支持 | 已支持 | 待接入 | 待接入 |
+| [FastWAM](https://github.com/yuantianyuan01/FastWAM) | 已支持 | 已支持 | 待接入 | 待接入 |
 
 原始精度实际使用 **BF16**，配置名称沿用 `fp16`；RTN 使用 **4 位权重、每组 128 个权重**。FastWAM 的自动对比固定使用首帧模式（`first-frame`）。AWQ、HSA 的预留接口不表示已完成适配或验证，平台不会为它们生成占位分数。
 
@@ -63,6 +63,11 @@
 | 结果指标 | 任务成功率、集合平均成功率、查询耗时、运行与加载峰值显存 |
 | 结果导出 | JSON、Markdown、CSV、对比图 |
 | 复现检查 | 记录并校验模型、代码、环境、输入及已完成结果 |
+
+### 模型&环境下载
+目前支持模型如下：[OpenVLA](https://github.com/openvla/openvla) · [VLA-Adapter](https://github.com/OpenHelix-Team/VLA-Adapter) · [FastWAM](https://github.com/yuantianyuan01/FastWAM)
+目前支持的虚拟环境如下：[LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO)。
+
 
 ## 开始使用
 
@@ -77,6 +82,7 @@ python -m http.server 8000 --bind 127.0.0.1
 打开 **http://127.0.0.1:8000/demo/**，即可配置预览、浏览历史实验、切换任务集合并下载演示数据表。也可以直接在浏览器打开 `demo/index.html`。
 
 GitHub 中的 HTML 文件链接显示源码；交互演示需下载后在本地打开。完整录屏见[演示视频](docs/media/embodiq-demo.mp4)。
+
 
 ### 启动评测工作台
 
@@ -96,10 +102,10 @@ embodiq web --config configs/stage_fp16_rtn.json --runs-root results/platform --
 ```bash
 embodiq launch configs/stage_fp16_rtn.json \
   --models vla_adapter --methods fp16 rtn \
-  --suites libero_spatial --profile smoke --gpu 0
+  --suites libero_spatial --profile formal --gpu 0
 ```
 
-`smoke` 表示快速检查，每个模型／方法／任务集合运行 1 回合。使用 `--profile formal` 切换正式评测；完整的 **3 个模型 × 2 种方法 × 4 个集合**共计 **31 个阶段、12,000 回合**。更多用法见[命令行流程](docs/automatic_evaluation.md)。
+完整的 **3 个模型 × 2 种方法 × 4 个集合**共计 **31 个阶段、12,000 回合**。更多用法见[命令行流程](docs/automatic_evaluation.md)。
 
 ## 如何理解评测结果
 
@@ -145,10 +151,4 @@ CUDA_VISIBLE_DEVICES='' PYTHONPATH=src python -m pytest -q tests/
 
 </details>
 
-## 授权与上游项目
 
-本仓库尚未选定整体开源许可证。第三方代码与模型分别遵循其原项目授权，详见[第三方说明](THIRD_PARTY.md)。
-
-模型与仿真环境：[OpenVLA](https://github.com/openvla/openvla) · [VLA-Adapter](https://github.com/OpenHelix-Team/VLA-Adapter) · [FastWAM](https://github.com/yuantianyuan01/FastWAM) · [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO)。
-
-界面信息组织参考：[RLark](https://github.com/RLinf/RLark) · [Genie Sim / RoboColiseum](https://github.com/AgibotTech/genie_sim)。
