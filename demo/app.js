@@ -6,7 +6,7 @@ const suiteNames = {libero_spatial:'空间关系', libero_object:'目标物体',
 const suiteDescriptions = {libero_spatial:'理解物体的位置关系',libero_object:'识别并操作指定物体',libero_goal:'根据指令完成目标',libero_10:'连续完成多步操作'};
 const phases = {planned:'等待开始',starting:'正在启动',preflight:'检查模型与输入',waiting_for_gpu:'等待空闲显卡',running:'正在评测',complete:'已完成',blocked:'需要处理',failed:'运行失败',stopped:'已停止',interrupted:'运行中断',pending:'等待开始'};
 const pageInfo = {create:['新建评测','选择模型、量化方法和任务集合。'],tasks:['任务管理','查看评测进度，管理已提交的实验。'],results:['评测结果','按任务集合比较成功率、响应时间和显存占用。']};
-let token='', current='', state=null, allRuns=[], refreshing=false, previewRevision=0, reportRevision=0, submitting=false, reportData=null, reportSuite='all', readingReport=false;
+let token='', current='', state=null, allRuns=[], refreshing=false, previewRevision=0, reportRevision=0, submitting=false, reportData=null, reportSuite='all', readingReport=false,reportMode='performance';
 function node(tag,text,cls){const el=document.createElement(tag);if(text!==undefined)el.textContent=text;if(cls)el.className=cls;return el;}
 function readableError(message){
   const text=String(message);
@@ -63,7 +63,7 @@ function runLabel(run){return `${dateLabel(run)} · ${run.models.map(x=>modelNam
 function setOptions(id,options,value){
   const signature=JSON.stringify(options);if($(id).dataset.options!==signature){$(id).replaceChildren(...options.map(([text,v])=>new Option(text,v)));$(id).dataset.options=signature;}$(id).value=value;
 }
-function clearReport(){++reportRevision;reportData=null;reportSuite='all';$('report').replaceChildren(node('p','选择已完成的实验，点击“读取结果”查看。','empty'));}
+function clearReport(){reportMode='performance';++reportRevision;reportData=null;reportSuite='all';$('report').replaceChildren(node('p','选择已完成的实验，点击“读取结果”查看。','empty'));}
 function selectRun(id){
   if(id!==current){current=id;clearReport();$('log-stage').value='';}
   const run=allRuns.find(x=>x.run_id===id);if(run)renderStatus(run);renderRunList();
@@ -159,16 +159,86 @@ function chart(title,description,rows,key,format,fixedMax){
     line.append(svg);section.append(line);
   }return section;
 }
+const suiteOrder=['libero_spatial','libero_object','libero_goal','libero_10'];
+function svgNode(tag,attributes={},text){
+  const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  for(const [key,value] of Object.entries(attributes))el.setAttribute(key,String(value));
+  if(text!==undefined)el.textContent=text;return el;
+}
+function successChart(model,cells){
+  const section=node('section',undefined,'trend-card');section.append(node('h3',modelNames[model]||model));
+  const selected=suiteOrder.filter(s=>cells.some(c=>c.suite===s)),width=460,height=290,left=48,right=34,top=34,bottom=54;
+  const x=i=>selected.length===1?width/2:left+i*(width-left-right)/(selected.length-1),y=value=>top+(1-value)*(height-top-bottom);
+  const svg=svgNode('svg',{viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':`${modelNames[model]||model} 各任务集合成功率；纵轴为 0 至 100%`,class:'trend-svg'});
+  svg.append(svgNode('title',{},`${modelNames[model]||model} · 任务成功率`));
+  for(const value of [0,.25,.5,.75,1]){
+    svg.append(svgNode('line',{x1:left,y1:y(value),x2:width-right,y2:y(value),stroke:'#e4e9e7','stroke-width':1}));
+    svg.append(svgNode('text',{x:left-10,y:y(value)+4,'text-anchor':'end',fill:'#657773','font-size':12},`${value*100}%`));
+  }
+  selected.forEach((suite,i)=>svg.append(svgNode('text',{x:x(i),y:height-23,'text-anchor':'middle',fill:'#435b57','font-size':13},suiteNames[suite])));
+  for(const method of ['fp16','rtn']){
+    const color=method==='fp16'?'#607286':'#187e74';
+    const points=selected.map((suite,i)=>({cell:cells.find(c=>c.model===model&&c.method===method&&c.suite===suite),i}));
+    let segment=[];const flush=()=>{if(segment.length>1)svg.append(svgNode('polyline',{points:segment.join(' '),fill:'none',stroke:color,'stroke-width':2.4,'stroke-dasharray':method==='fp16'?'5 4':'none'}));segment=[];};
+    for(const point of points){const value=point.cell?.success_rate;if(typeof value==='number'&&Number.isFinite(value))segment.push(`${x(point.i)},${y(value)}`);else flush();}flush();
+    for(const {cell,i} of points){
+      if(typeof cell?.success_rate!=='number'||!Number.isFinite(cell.success_rate))continue;
+      const px=x(i),py=y(cell.success_rate),label=`${suiteNames[cell.suite]} · ${method==='fp16'?'原始精度':'RTN'}：${percent(cell.success_rate)}`;
+      const point=method==='fp16'?svgNode('circle',{cx:px,cy:py,r:4.2,fill:'#fff',stroke:color,'stroke-width':2}):svgNode('rect',{x:px-4,y:py-4,width:8,height:8,rx:1,fill:color});
+      point.setAttribute('tabindex','0');point.setAttribute('role','img');point.setAttribute('aria-label',label);point.dataset.value=cell.success_rate;point.dataset.model=model;point.dataset.method=method;point.dataset.suite=cell.suite;
+      point.append(svgNode('title',{},label));svg.append(point);
+      svg.append(svgNode('text',{x:px,y:py+(method==='fp16'?-13:22),'text-anchor':'middle',fill:color,'font-size':13,'font-weight':600},`${(cell.success_rate*100).toFixed(1)}`));
+    }
+  }
+  section.append(svg);return section;
+}
+function successCharts(cells){
+  const wrap=node('div',undefined,'trend-grid');
+  for(const model of Object.keys(modelNames))if(cells.some(c=>c.model===model))wrap.append(successChart(model,cells));
+  return wrap;
+}
+function downloadSuccessChart(cells){
+  const charts=successCharts(cells),count=charts.children.length;
+  const doc=svgNode('svg',{xmlns:'http://www.w3.org/2000/svg',width:980,height:count*340+110,viewBox:`0 0 980 ${count*340+110}`});
+  doc.append(svgNode('rect',{width:'100%',height:'100%',fill:'#fff'}));
+  doc.append(svgNode('text',{x:40,y:42,fill:'#213b35','font-size':24,'font-family':'sans-serif'},'EmbodiQ · 各任务集合成功率'));
+  const legend=[cells.some(c=>c.method==='fp16')?'原始精度：灰色虚线 / 圆点':'',cells.some(c=>c.method==='rtn')?'RTN：绿色实线 / 方点':'','纵轴：0–100%'].filter(Boolean).join('    ');
+  doc.append(svgNode('text',{x:40,y:73,fill:'#50645e','font-size':15,'font-family':'sans-serif'},legend));
+  [...charts.children].forEach((card,i)=>{
+    doc.append(svgNode('text',{x:40,y:115+i*340,fill:'#213b35','font-size':20,'font-family':'sans-serif'},card.querySelector('h3').textContent));
+    const svg=card.querySelector('svg');svg.setAttribute('x','200');svg.setAttribute('y',String(90+i*340));svg.setAttribute('width','720');svg.setAttribute('height','300');svg.setAttribute('font-family','sans-serif');doc.append(svg);
+  });
+  const url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(doc)],{type:'image/svg+xml'}));
+  const link=node('a');link.href=url;link.download='success-rates.svg';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 function renderReport(){
   if(!reportData)return;const data=reportData,container=$('report');container.replaceChildren();
   container.append(node('p',data.display_note||(data.formal?'正式评测 · 保存的结果已通过完整性检查':'结果未满足正式评测条件'),`report-label${data.formal?' formal':''}`));
   const toolbar=node('div',undefined,'report-toolbar'),tabs=node('div',undefined,'suite-tabs');tabs.setAttribute('aria-label','筛选任务集合');
-  const suites=[...new Set(data.cells.map(c=>c.suite))];
+  const suites=suiteOrder.filter(s=>data.cells.some(c=>c.suite===s));
   for(const [value,label] of [['all','全部集合'],...suites.map(s=>[s,suiteNames[s]||s])]){const button=node('button',label);button.type='button';button.setAttribute('aria-pressed',String(reportSuite===value));button.onclick=()=>{reportSuite=value;renderReport();[...$('report').querySelectorAll('.suite-tabs button')].find(b=>b.getAttribute('aria-pressed')==='true')?.focus();};tabs.append(button);}
   toolbar.append(tabs,node('span',reportSuite==='all'?'汇总当前实验所选集合':'仅显示当前集合','muted'));container.append(toolbar);
   const cells=data.cells.filter(c=>reportSuite==='all'||c.suite===reportSuite);
   const rows=reportSuite==='all'?data.aggregates.map(r=>({...r,success_rate:r.selected_suites_success_rate})):cells;
-  const charts=node('div',undefined,'chart-grid');charts.append(chart('任务成功率',reportSuite==='all'?'所选集合的平均值 · 越高越好':'当前集合 · 越高越好',rows,'success_rate',percent,1),chart('平均响应时间','每次模型请求 · 毫秒 · 越短越好',rows,'query_ms',v=>metric(v)),chart('运行峰值显存','显卡监测 · GiB · 越低越好',rows,'steady_nvml_gib',v=>metric(v,3)));container.append(charts);
+  const summary=node('div',undefined,'result-overview');
+  for(const [label,value] of [['模型 / 方法组合',String(rows.length)],['当前评测回合',cells.reduce((sum,c)=>sum+c.n_episodes,0).toLocaleString('en-US')],['任务集合',String(new Set(cells.map(c=>c.suite)).size)]]){
+    const item=node('div');item.append(node('span',label),node('strong',value));summary.append(item);
+  }container.append(summary);
+  const modes=node('div',undefined,'chart-heading'),buttons=node('div',undefined,'chart-mode');buttons.setAttribute('aria-label','图表类型');
+  for(const [value,label] of [['performance','任务表现'],['resources','速度与显存']]){
+    const button=node('button',label);button.type='button';button.setAttribute('aria-pressed',String(reportMode===value));button.onclick=()=>{reportMode=value;renderReport();[...$('report').querySelectorAll('.chart-mode button')].find(b=>b.getAttribute('aria-pressed')==='true')?.focus();};buttons.append(button);
+  }
+  const legend=node('div',undefined,'chart-legend');if(rows.some(r=>r.method==='fp16'))legend.append(node('span','○ 原始精度','legend-baseline'));if(rows.some(r=>r.method==='rtn'))legend.append(node('span','▪ RTN 四位量化','legend-quant'));
+  modes.append(buttons,legend);container.append(modes);
+  if(reportMode==='performance'){
+    container.append(node('p',reportSuite==='all'?'各任务集合成功率 · 纵轴统一为 0–100%，越高越好':'当前任务集合成功率 · 越高越好','chart-description'));
+    if(reportSuite==='all')container.append(successCharts(cells));
+    else{const grid=node('div',undefined,'chart-grid single');grid.append(chart('任务成功率',suiteNames[reportSuite],rows,'success_rate',percent,1));container.append(grid);}
+  }else{
+    const charts=node('div',undefined,'chart-grid resources');charts.append(chart('平均查询耗时','毫秒 / 次 · 越短越好',rows,'query_ms',v=>metric(v)),chart('运行峰值显存','GiB · 越低越节省显存',rows,'steady_nvml_gib',v=>metric(v,2)));container.append(charts);
+    container.append(node('p','查询耗时适合在同一模型内比较；不同模型每次输出的动作数量不同。','hint'));
+  }
   if(reportSuite==='all'){
     container.append(node('h3','模型与方法对比','report-section'));
     container.append(table(['模型','量化方法','所选集合平均成功率','四集合平均成功率','较原始精度变化（百分点）'],data.aggregates.map(r=>[modelNames[r.model]||r.model,methodNames[r.method]||r.method,percent(r.selected_suites_success_rate),percent(r.four_suite_macro_success_rate),metric(r.delta_pp_vs_fp16)])));
@@ -178,6 +248,7 @@ function renderReport(){
   container.append(table(['模型','量化方法','任务集合','成功率','回合数','平均响应（毫秒）','运行峰值显存（GiB）','加载峰值显存（GiB）'],cells.map(c=>[modelNames[c.model]||c.model,methodNames[c.method]||c.method,suiteNames[c.suite]||c.suite,percent(c.success_rate),c.n_episodes,metric(c.query_ms),metric(c.steady_nvml_gib,3),metric(c.load_alloc_gib,3)])));
   container.append(node('p','运行峰值来自显卡监测，加载峰值来自推理框架，二者统计口径不同。各指标说明见下方“指标怎么看？”。','hint'));
   const links=node('div',undefined,'downloads');for(const [file,label] of [['report.md','下载完整报告'],['cells.csv','下载数据表'],['tradeoffs.svg','下载原始对比图']]){const a=node('a',label);a.href=`/api/runs/${current}/report/${file}`;a.download=file;links.append(a);}container.append(links);
+  const chartDownload=node('button','下载任务对比图（SVG）','text-button');chartDownload.type='button';chartDownload.onclick=()=>downloadSuccessChart(cells);links.append(chartDownload);
   const details=node('details',undefined,'technical');details.append(node('summary','数据说明'));
   for(const caveat of data.caveats||[])details.append(node('p',caveat));container.append(details);
 }
