@@ -29,13 +29,13 @@
 
 ### 成功率对比
 
-按模型查看不同任务集合的成功率，对比原始精度与量化后的表现。
+每个模型一张摘要卡，给出量化后的成功率、显存与耗时变化；哑铃图逐个任务集合对比原始精度与量化后的成功率。
 
-![成功率对比：各模型在不同任务集合上的成功率折线图](docs/media/results.png)
+![成功率对比：模型摘要卡与各任务集合的成功率哑铃图](docs/media/results.png)
 
 ### 耗时与显存
 
-对比模型查询耗时与峰值显存，查看量化带来的资源变化。
+按模型成对对比查询耗时与峰值显存，并标出量化带来的变化比例。
 
 ![资源对比：模型查询耗时与运行峰值显存](docs/media/resources.png)
 
@@ -51,6 +51,7 @@ python -m http.server 8000 --bind 127.0.0.1
 
 ## Updates
 
+- **[2026-10-11]** Redesigned the web workbench: new light/dark theme, per-model summary cards, success-rate dumbbell charts and paired resource bars.
 - **[2026-10-10]** Initial release of code.
 - ...
 
@@ -123,7 +124,7 @@ export EMBODIQ_PYTHON_FASTWAM=/path/to/fastwam/bin/python
 embodiq web --config configs/my.local.json --runs-root results/platform --port 8765
 ```
 
-打开 <http://127.0.0.1:8765>，选择模型、量化方法、任务集合和显卡，提交评测。完成后可查看成功率折线图、耗时与显存对比，并导出报告、数据表和图表。
+打开 <http://127.0.0.1:8765>，选择模型、量化方法、任务集合和显卡，提交评测。完成后可查看成功率对比图、耗时与显存对比，并导出报告、数据表和图表。
 
 ### 命令行
 

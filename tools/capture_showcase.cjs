@@ -16,7 +16,7 @@ const path=require('path');
   await page.screenshot({path:path.join(process.env.DEMO_OUTPUT||'docs/media',file+'.png'),fullPage:view!=='results'});
  }
  await page.getByRole('button',{name:'速度与显存',exact:true}).click();
- await page.waitForSelector('.chart-grid.resources');
+ await page.waitForSelector('.chart-grid');
  await page.locator('.report-toolbar').evaluate(el=>window.scrollTo(0,window.scrollY+el.getBoundingClientRect().top-100));
  await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
  await page.screenshot({path:path.join(process.env.DEMO_OUTPUT||'docs/media','resources.png')});

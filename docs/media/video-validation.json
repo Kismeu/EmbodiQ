@@ -1,6 +1,6 @@
 {
-  "frames_checked": 3008,
-  "duration_s": 120.32,
+  "frames_checked": 3012,
+  "duration_s": 120.48,
   "size": [
     1600,
     900
@@ -8,6 +8,6 @@
   "all_caption_edges_visible": true,
   "viewport_changes": 0,
   "scene_count": 12,
-  "minimum_settled_hold_s": 6.0009999999999994,
+  "minimum_settled_hold_s": 6.000999999999991,
   "trimmed_start_frames": 0
 }
