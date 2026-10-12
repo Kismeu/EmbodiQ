@@ -39,6 +39,12 @@
 
 ![资源对比：模型查询耗时与运行峰值显存](docs/media/resources.png)
 
+### 性能与资源权衡
+
+同时查看成功率与显存或查询耗时，用箭头呈现量化前后的变化，并读取当前任务集合的中文对比结论。
+
+![性能与资源权衡：成功率与峰值显存散点图](docs/media/tradeoffs.png)
+
 </details>
 
 无需安装模型即可体验交互演示。在仓库根目录运行：
@@ -51,6 +57,7 @@ python -m http.server 8000 --bind 127.0.0.1
 
 ## Updates
 
+- **[2026-10-11]** Redesigned the web workbench: new light/dark theme, per-model summary cards, success-rate dumbbell charts and paired resource bars.
 - **[2026-10-10]** Initial release of code.
 - ...
 

@@ -26,7 +26,13 @@
 <fieldset><legend>任务集合 <span class="muted">LIBERO</span></legend><div id="suites" class="choices suite-choices"></div></fieldset>
 <p class="hint">每个任务集合包含 10 项任务，每项运行 50 回合；每个“模型 × 方法 × 任务集合”组合共 500 回合。</p>
 <div class="form-divider"></div><h3>运行设备</h3>
-<div class="grid-two"><div><label for="gpu">显卡编号</label><input id="gpu" type="number" min="0" max="255" value="0" required><p class="hint">填写服务器上的显卡编号，从 0 开始。</p></div><div><label for="wait">显卡忙碌时最多等待</label><div class="input-unit"><input id="wait" type="number" min="0" max="86400" value="0" required><span>秒</span></div><p class="hint">设为 0 时，显卡忙碌就暂停任务。</p></div></div>
+<div class="grid-two"><div><div class="gpu-picker-heading"><label for="gpu">选择显卡</label><button id="refresh-gpus" type="button" class="text-button">刷新列表</button></div><select id="gpu" required disabled aria-describedby="gpu-list-status"><option value="">正在读取显卡列表…</option></select><p id="gpu-list-status" class="hint" role="status">自动读取服务器上的显卡编号。</p></div><div><label for="wait">显卡忙碌时最多等待</label><div class="input-unit"><input id="wait" type="number" min="0" max="86400" value="0" required><span>秒</span></div><p class="hint">设为 0 时，显卡忙碌就暂停任务。</p></div></div>
+<section class="gpu-memory" aria-labelledby="gpu-memory-title">
+<div class="gpu-memory-heading"><h3 id="gpu-memory-title">当前显存</h3><button id="refresh-gpu-memory" type="button" class="text-button">刷新显存</button></div>
+<dl class="gpu-memory-values" id="gpu-memory-values" hidden><div><dt>剩余显存</dt><dd id="gpu-memory-free">—</dd></div><div><dt>已用显存</dt><dd id="gpu-memory-used">—</dd></div><div><dt>总显存</dt><dd id="gpu-memory-total">—</dd></div></dl>
+<progress id="gpu-memory-meter" class="gpu-memory-meter" max="1" value="0" aria-label="已用显存占比" hidden></progress>
+<p id="gpu-memory-status" class="hint" role="status">正在读取所选显卡的显存…</p>
+</section>
 <details class="technical"><summary>精度与方法说明</summary><p>原始精度采用 BF16，即 16 位浮点数。四位量化采用 RTN（就近舍入），每 128 个权重一组。AWQ 与 HSA 暂未接入，当前不可选。</p></details>
 </div>
 <aside class="panel submit-panel"><h2>本次评测</h2><dl id="selection-summary"></dl><div class="estimate" id="estimate" aria-live="polite">正在读取配置…</div><p id="profile-note" class="hint">按统一任务协议执行正式评测。</p><button class="primary" id="submit" type="submit" disabled>开始评测</button><p class="hint after-submit">提交后可在“任务管理”查看进度。</p></aside>
