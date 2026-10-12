@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>EmbodiQ · 在线演示</title><link rel="stylesheet" href="./style.css"><script defer src="./demo-data.js"></script><script defer src="./demo.js"></script><script defer src="./app.js"></script><script defer src="./guide.js"></script><link rel="stylesheet" href="./guide.css"></head>
+<body><div class="demo-banner">在线演示 · 按三个步骤浏览已完成的评测，不会启动模型。<a href="https://github.com/Kismeu/embodiq#安装">安装与使用</a></div>
+<a class="skip" href="#main">跳转到主要内容</a>
+<aside class="sidebar">
+<a class="brand" href="#tasks">EmbodiQ<span>具身模型量化评测</span></a>
+<nav aria-label="主要导航">
+<a href="#create"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>新建评测</a>
+<a href="#tasks" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>任务管理</a>
+<a href="#results"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16h16M8 16v-4M12 16V7M16 16v-6"/></svg>评测结果</a>
+</nav>
+<div class="sidebar-foot">交互演示<span>LIBERO 机器人操作任务</span></div>
+</aside>
+<div class="shell">
+<header class="topbar"><span>评测工作台 <span class="crumb">/ <span id="page-name">任务管理</span></span></span><span id="connection">正在连接…</span></header>
+<main id="main">
+<div class="page-heading"><div><h1 id="page-title">任务管理</h1><p id="page-description">查看评测进度，管理已提交的实验。</p></div><a class="button primary" id="new-link" href="#create">新建评测</a></div>
+<div id="notice" role="status" aria-live="polite" hidden></div>
+<section id="view-create" class="view" hidden aria-label="新建评测">
+<form id="create-form" class="create-layout">
+<div class="panel form-panel">
+<div class="section-head"><h2>评测配置</h2><span class="muted">模型与方法可多选</span></div>
+<fieldset><legend>选择模型</legend><div id="models" class="choices model-choices"></div></fieldset>
+<fieldset><legend>量化方法</legend><div id="methods" class="choices"></div><p class="hint">原始精度作为对照；四位量化用于比较压缩后的任务表现与资源占用。</p></fieldset>
+<fieldset><legend>任务集合 <span class="muted">LIBERO</span></legend><div id="suites" class="choices suite-choices"></div></fieldset>
+<p class="hint">每个任务集合包含 10 项任务，每项运行 50 回合；每个“模型 × 方法 × 任务集合”组合共 500 回合。</p>
+<div class="form-divider"></div><h3>运行设备</h3>
+<div class="grid-two"><div><div class="gpu-picker-heading"><label for="gpu">选择显卡</label><button id="refresh-gpus" type="button" class="text-button">刷新列表</button></div><select id="gpu" required disabled aria-describedby="gpu-list-status"><option value="">正在读取显卡列表…</option></select><p id="gpu-list-status" class="hint" role="status">自动读取服务器上的显卡编号。</p></div><div><label for="wait">显卡忙碌时最多等待</label><div class="input-unit"><input id="wait" type="number" min="0" max="86400" value="0" required><span>秒</span></div><p class="hint">设为 0 时，显卡忙碌就暂停任务。</p></div></div>
+<section class="gpu-memory" aria-labelledby="gpu-memory-title">
+<div class="gpu-memory-heading"><h3 id="gpu-memory-title">当前显存</h3><button id="refresh-gpu-memory" type="button" class="text-button">刷新显存</button></div>
+<dl class="gpu-memory-values" id="gpu-memory-values" hidden><div><dt>剩余显存</dt><dd id="gpu-memory-free">—</dd></div><div><dt>已用显存</dt><dd id="gpu-memory-used">—</dd></div><div><dt>总显存</dt><dd id="gpu-memory-total">—</dd></div></dl>
+<progress id="gpu-memory-meter" class="gpu-memory-meter" max="1" value="0" aria-label="已用显存占比" hidden></progress>
+<p id="gpu-memory-status" class="hint" role="status">正在读取所选显卡的显存…</p>
+</section>
+<details class="technical"><summary>精度与方法说明</summary><p>原始精度采用 BF16，即 16 位浮点数。四位量化采用 RTN（就近舍入），每 128 个权重一组。AWQ 与 HSA 暂未接入，当前不可选。</p></details>
+</div>
+<aside class="panel submit-panel"><h2>本次评测</h2><dl id="selection-summary"></dl><div class="estimate" id="estimate" aria-live="polite">正在读取配置…</div><p id="profile-note" class="hint">按统一任务协议执行正式评测。</p><button class="primary" id="submit" type="submit" disabled>开始评测</button><p class="hint after-submit">提交后可在“任务管理”查看进度。</p></aside>
+</form>
+</section>
+<section id="view-tasks" class="view" aria-label="任务管理">
+<div class="panel task-list"><div class="section-head"><h2>实验记录 <span id="run-total" class="total">0</span></h2><button id="refresh" type="button">刷新</button></div>
+<div class="list-tools"><label class="search-label" for="run-search">查找实验<input id="run-search" type="search" placeholder="搜索模型、方法或实验编号"></label><label for="run-filter">运行状态<select id="run-filter"><option value="all">全部状态</option><option value="active">正在执行</option><option value="complete">已完成</option><option value="attention">需要处理</option></select></label></div>
+<div class="table-wrap"><table class="run-table"><thead><tr><th>实验</th><th>量化方法</th><th>任务集合</th><th>状态</th><th>进度</th><th>操作</th></tr></thead><tbody id="run-rows"></tbody></table></div><p id="run-empty" class="empty" hidden>还没有评测记录。点击“新建评测”开始。</p></div>
+<section class="panel monitor" aria-labelledby="monitor-title"><div class="section-head"><h2 id="monitor-title">实验详情</h2><a href="#results" class="text-link">查看评测结果</a></div>
+<label for="runs">选择实验</label><select id="runs"><option value="">正在加载…</option></select><p id="run-meta" class="hint">请选择已有实验。</p><details class="run-identity"><summary>实验编号</summary><code id="run-id">—</code></details>
+<div class="run-summary"><strong id="phase">暂无任务</strong><span id="count">0 / 0 阶段</span></div><progress id="progress" value="0" max="1" aria-label="阶段完成进度"></progress>
+<div class="actions"><button id="cancel" type="button" disabled>停止评测</button><button id="resume" type="button" disabled>继续评测</button><span class="hint">继续评测时，使用“新建评测”中的显卡设置。</span></div>
+<p id="reasons" class="error" role="status"></p><ol id="stages" class="stages"><li class="empty">选择实验后，这里会显示各阶段的执行情况。</li></ol>
+<details id="log-details" class="technical"><summary>运行日志 <span>排查问题时查看</span></summary><div class="log-heading"><label for="log-stage">日志来源</label><select id="log-stage"><option value="">整体运行日志</option></select></div><pre id="logs" tabindex="0" aria-label="最近运行日志">等待日志…</pre><p class="hint">保留程序原始输出，每 3 秒刷新；日志较长时仅显示末尾部分。</p></details>
+</section></section>
+<section id="view-results" class="view" hidden aria-label="评测结果">
+<div class="panel results"><div class="section-head"><h2>结果对比</h2><button id="load-report" type="button" disabled>读取结果</button></div><label for="report-run">选择实验</label><select id="report-run"><option value="">暂无实验</option></select><p class="hint">仅展示所选实验的结果。完成评测后，点击“读取结果”加载。</p><div id="report"><p class="empty">尚未读取结果。</p></div></div>
+<details class="panel glossary"><summary>指标怎么看？</summary><dl><dt>任务成功率</dt><dd>成功完成操作的回合占比，越高越好。</dd><dt>平均响应时间</dt><dd>模型收到一次请求到输出动作的平均耗时，单位为毫秒；不是机器人的整个操作时长。</dd><dt>运行峰值显存</dt><dd>推理期间进程占用的显存峰值，由显卡监测接口读取。加载峰值单独记录，不能与它直接相加。</dd><dt>加载峰值显存</dt><dd>模型加载期间，推理框架分配显存的峰值。统计口径与运行峰值不同。</dd><dt>平均成功率</dt><dd>对所选任务集合的成功率取平均。只有正式评测完成全部四个集合时，才展示“四集合平均”。</dd><dt>显存单位</dt><dd>表中的 GiB 是二进制存储单位，1 GiB = 1,024³ 字节。数值越小，占用的显存越少。</dd></dl></details>
+</section>
+<footer>量化适配与任务验证<span>当前支持原始精度与四位量化；AWQ、HSA 待接入。</span></footer>
+</main></div></body></html>
