@@ -18,7 +18,7 @@ def sample_frames(ffmpeg, source):
 
 
 def caption_present(frames):
-    expected = np.array([19, 44, 39])
+    expected = np.array([20, 23, 28])  # caption bar #14171c
     pixels = frames[:, 88, [2, 80, 157], :].astype(int)
     return (abs(pixels - expected).max(axis=(1, 2)) <= 18)
 

@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from embodiq import pipeline as p
 from embodiq.config import build_plan
+from embodiq.web.resources import GPUMemoryMonitor
 
 STATIC = Path(__file__).parent / 'static'
 ARTIFACTS = {'report.md': 'text/markdown; charset=utf-8', 'cells.csv': 'text/csv; charset=utf-8',
@@ -41,6 +42,7 @@ class Workbench:
         self.root.mkdir(parents=True, exist_ok=True)
         self.token = secrets.token_urlsafe(32)
         self.mutex = threading.Lock()
+        self.memory_monitor = GPUMemoryMonitor()
 
     def path(self, run_id):
         if not re.fullmatch(r'[A-Za-z0-9_-]{1,100}', run_id):
@@ -270,6 +272,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(200, (STATIC / name).read_bytes(), mime)
             if route == ['api', 'capabilities'] and not post:
                 return self.reply(200, app.capabilities())
+            if route == ['api', 'gpus'] and not post:
+                return self.reply(200, app.memory_monitor.devices())
+            if route == ['api', 'gpu-memory'] and not post:
+                query = parse_qs(url.query, keep_blank_values=True)
+                indices = query.get('gpu', ['0'])
+                if (set(query) - {'gpu'} or len(indices) != 1
+                        or not re.fullmatch(r'[0-9]{1,3}', indices[0]) or int(indices[0]) > 255):
+                    raise APIError(400, '显卡编号需为 0–255 的整数')
+                return self.reply(200, app.memory_monitor.sample(int(indices[0])))
             if route == ['api', 'preview'] and post:
                 return self.reply(200, app.preview(body))
             if route == ['api', 'runs']:

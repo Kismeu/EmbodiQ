@@ -107,6 +107,29 @@ def test_http_capabilities_assets_preview_and_empty_list(http, app):
     assert list(app.root.iterdir()) == []  # preview does not create runs
 
 
+def test_http_gpu_list_is_read_only(http, app, monkeypatch):
+    expected = {'status': 'ok', 'gpus': [2, 5], 'message': ''}
+    monkeypatch.setattr(app.memory_monitor, 'devices', lambda: expected)
+    assert http('/api/gpus') == (200, expected)
+    assert http('/api/gpus', {})[0] == 404
+    assert list(app.root.iterdir()) == []
+
+
+def test_http_gpu_memory_is_read_only(http, app, monkeypatch):
+    calls = []
+    expected = {'status': 'ok', 'memory': {'total_gib': 24, 'used_gib': 8, 'free_gib': 15.5},
+                'sampled_at': '2026-10-12T00:00:00+00:00', 'message': ''}
+    def sample(gpu):
+        calls.append(gpu)
+        return expected
+    monkeypatch.setattr(app.memory_monitor, 'sample', sample)
+    assert http('/api/gpu-memory?gpu=2') == (200, expected)
+    assert calls == [2]
+    assert http('/api/gpu-memory?gpu=-1')[0] == 400
+    assert http('/api/gpu-memory?gpu=2', {})[0] == 404
+    assert calls == [2] and list(app.root.iterdir()) == []
+
+
 @pytest.mark.parametrize('headers', [
     {'X-Embodiq-Token': ''}, {'Origin': 'http://evil.example'}, {'Host': 'evil.example'},
 ])

@@ -79,96 +79,96 @@
       "title": "选择配置",
       "text": "从选择模型到导出报告，用同一组配置走完整个评测流程。",
       "start_s": 0,
-      "settled_s": 1.025,
-      "end_s": 7.026
+      "settled_s": 1.017,
+      "end_s": 7.018
     },
     {
       "chapter": "01",
       "title": "选择模型",
       "text": "以 VLA-Adapter 为例，对比原始精度与 RTN 四位量化。",
-      "start_s": 7.026,
-      "settled_s": 11.54,
-      "end_s": 18.541
+      "start_s": 7.019,
+      "settled_s": 11.533,
+      "end_s": 18.534
     },
     {
       "chapter": "01",
       "title": "任务范围",
       "text": "保留四类任务，右侧汇总所选模型、方法和评测规模。",
-      "start_s": 18.541,
-      "settled_s": 21.156,
-      "end_s": 27.161
+      "start_s": 18.534,
+      "settled_s": 21.149,
+      "end_s": 27.15
     },
     {
       "chapter": "02",
       "title": "查看任务",
       "text": "点击“查看本配置示例”，进入对应的任务记录。",
-      "start_s": 27.161,
-      "settled_s": 29.872,
-      "end_s": 35.874
+      "start_s": 27.15,
+      "settled_s": 29.865,
+      "end_s": 35.869
     },
     {
       "chapter": "02",
       "title": "核对内容",
       "text": "任务评测、资源测量和报告，均对应刚才选定的配置。",
-      "start_s": 35.874,
-      "settled_s": 37.838,
-      "end_s": 44.841
+      "start_s": 35.869,
+      "settled_s": 37.831,
+      "end_s": 44.834
     },
     {
       "chapter": "03",
-      "title": "任务表现",
-      "text": "查看成功率折线图：灰色为原始精度，绿色为 RTN。",
-      "start_s": 44.841,
-      "settled_s": 48.006,
-      "end_s": 57.006
+      "title": "任务成功率",
+      "text": "查看成功率哑铃图：空心灰点为原始精度，蓝点为 RTN，连线长度即差距。",
+      "start_s": 44.834,
+      "settled_s": 47.981,
+      "end_s": 56.982
     },
     {
       "chapter": "03",
       "title": "读取图表",
-      "text": "横轴为四类任务，纵轴为成功率；每个点标出对应数值。",
-      "start_s": 57.006,
-      "settled_s": 58.704,
-      "end_s": 65.705
+      "text": "悬停查看回合数：VLA-Adapter 在“任务目标”上下降 9.8 个百分点。",
+      "start_s": 56.982,
+      "settled_s": 58.664,
+      "end_s": 65.666
     },
     {
       "chapter": "04",
       "title": "速度与显存",
-      "text": "切换到资源对比，同时观察查询耗时和显存变化。",
-      "start_s": 65.705,
-      "settled_s": 68.871,
-      "end_s": 77.876
+      "text": "切换到资源对比：显存明显下降，查询耗时有所增加。",
+      "start_s": 65.666,
+      "settled_s": 68.83,
+      "end_s": 77.833
     },
     {
       "chapter": "04",
       "title": "按任务查看",
       "text": "也可以切换任务集合，比较同一类任务下的资源占用。",
-      "start_s": 77.876,
-      "settled_s": 81.953,
-      "end_s": 88.954
+      "start_s": 77.833,
+      "settled_s": 81.896,
+      "end_s": 88.896
     },
     {
       "chapter": "05",
       "title": "导出报告",
       "text": "回到全部集合，下载报告和数据表，保留完整对比结果。",
-      "start_s": 88.954,
-      "settled_s": 94.219,
-      "end_s": 101.224
+      "start_s": 88.896,
+      "settled_s": 94.162,
+      "end_s": 101.163
     },
     {
       "chapter": "05",
       "title": "导出图表",
       "text": "任务成功率图支持 SVG 导出，可直接用于汇报或论文排版。",
-      "start_s": 101.224,
-      "settled_s": 103.453,
-      "end_s": 110.459
+      "start_s": 101.163,
+      "settled_s": 103.412,
+      "end_s": 110.415
     },
     {
       "chapter": "05",
       "title": "完成",
       "text": "配置评测 → 查看任务 → 对比结果。演示不启动模型。",
-      "start_s": 110.46,
-      "settled_s": 114.535,
-      "end_s": 120.542
+      "start_s": 110.415,
+      "settled_s": 114.495,
+      "end_s": 120.496
     }
   ],
   "screenshots_during_recording": 0

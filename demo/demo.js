@@ -7,6 +7,8 @@
   window.fetch=async(input,options={})=>{
     const path=String(input).split('?')[0];
     if(path==='/api/capabilities')return json(data.capabilities);
+    if(path==='/api/gpus')return json({status:'demo',gpus:[0],message:'只读演示，显卡选项不代表本机设备。'});
+    if(path==='/api/gpu-memory')return json({status:'demo',memory:null,sampled_at:null,message:'只读演示不读取实时显存，请在正式工作台查看。'});
     if(path==='/api/preview'){
       const request=JSON.parse(options.body||'{}');
       for(const [key,allowed] of [['models',data.capabilities.models],['methods',['fp16','rtn']],['suites',data.capabilities.suites]]){
