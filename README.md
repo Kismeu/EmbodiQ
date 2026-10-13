@@ -57,7 +57,6 @@ python -m http.server 8000 --bind 127.0.0.1
 
 ## Updates
 
-- **[2026-10-11]** Redesigned the web workbench: new light/dark theme, per-model summary cards, success-rate dumbbell charts and paired resource bars.
 - **[2026-10-10]** Initial release of code.
 - ...
 
